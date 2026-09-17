@@ -47,6 +47,8 @@
 
 **العربية:** القالب الجيد ليس مجرد قطعة فولاذ؛ بل هو قرار هندسي يؤثر على الجودة والسرعة والتكلفة. أرسلوا تفاصيل مشروعكم إلى VeltriX.
 
+**Azərbaycanca:** Keyfiyyətli qəlib yalnız polad detal deyil; məhsulun keyfiyyətinə, sürətinə və maya dəyərinə təsir edən mühəndislik qərarıdır. Layihənizin detallarını VeltriX-ə göndərin.
+
 ## پاسخ آمادهٔ WhatsApp
 
 سلام، ممنون که با VeltriX تماس گرفتید. لطفاً نوع قطعه، تیراژ تقریبی، کشور مقصد و فایل یا تصویر پروژه را ارسال کنید. پس از بررسی اولیه، دربارهٔ مسیر مناسب قالب‌سازی با شما هماهنگ می‌کنیم.
