@@ -1,0 +1,31 @@
+name: Deploy VeltriX Telegram Bot
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'telegram-bot/**'
+      - '.github/workflows/deploy-telegram-bot.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: telegram-bot
+    steps:
+      - name: Checkout GitHub source
+        uses: actions/checkout@v4
+      - name: Validate Worker syntax
+        run: node --check worker-cloudflare.js
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: telegram-bot
+          command: deploy

@@ -1,0 +1,8 @@
+name = "veltrix-telegram-bot"
+main = "worker-cloudflare.js"
+compatibility_date = "2026-09-18"
+workers_dev = true
+
+[[kv_namespaces]]
+binding = "LEADS_KV"
+id = "cfccb3410e0e44648a5636f937884350"
