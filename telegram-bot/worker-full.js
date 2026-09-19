@@ -401,13 +401,43 @@ async function processUpdate(env, update) {
     const service = t(lang).services.find(x => x[1] === serviceId);
     if (service) {
       const prompts = {
-        fa: `<b>${service[0]}</b> برای تولید قطعات دقیق و باکیفیت طراحی و ساخته می‌شود. برای بررسی نیاز فنی و دریافت راهنمایی متناسب با پروژه، گزینهٔ بررسی پروژه را انتخاب کنید.`,
-        en: `<b>${service[0]}</b> is designed and manufactured for accurate, high-quality part production. Choose Project Review for technical guidance tailored to your project.`,
-        tr: `<b>${service[0]}</b>, hassas ve yüksek kaliteli parça üretimi için tasarlanır ve üretilir. Projenize özel teknik yönlendirme için Proje İncelemesini seçin.`,
-        ar: `يتم تصميم وتصنيع <b>${service[0]}</b> لإنتاج قطع دقيقة وعالية الجودة. اختاروا مراجعة المشروع للحصول على إرشاد فني مناسب لمشروعكم.`,
-        az: `<b>${service[0]}</b> dəqiq və yüksək keyfiyyətli detalların istehsalı üçün hazırlanır və istehsal edilir. Layihənizə uyğun texniki məsləhət üçün Layihə baxışını seçin.`
+        fa: {
+          injection: 'ساخت قالب تزریق پلاستیک سفارشی VeltriX، طراحی مسیر ورود مواد، خنک‌کاری، هواگیری و پرانش را متناسب با هندسه قطعه در نظر می‌گیرد. برای بررسی فایل قطعه، انتخاب ماده و شروع پروژه تولیدی خود با ما پیام دهید.',
+          hotrunner: 'قالب‌های هات‌رانر، مذاب پلیمر را در منیفولد و نازل‌های گرم نگه می‌دارند و قالب‌های ولوگیت با پین‌های مکانیکی، باز و بسته‌شدن هر گیت را کنترل می‌کنند. راهکار هات‌رانر و ولوگیت بر اساس رزین، هندسه قطعه و نیاز تولید شما انتخاب می‌شود تا کنترل پرشدن و کاهش ضایعات رانر بررسی شود.',
+          medical: 'خدمات VeltriX شامل قالب‌های تزریق برای قطعات پزشکی و بسته‌بندی پلاستیکی است که بر اساس هندسه قطعه، رزین و الزامات تولید انتخاب می‌شوند. برای ظروف دیواره‌نازک، درپوش، پیش‌فرم بطری PET و قطعات دقیق، فایل CAD یا مشخصات قطعه را ارسال کنید تا گزینه‌های قالب چندحفره‌ای و راهگاه گرم بررسی شود.',
+          auto: 'قالب‌های خودرو و لوازم خانگی VeltriX برای تولید قطعات پلاستیکی دقیق و تکرارپذیر طراحی می‌شوند. برای بررسی قطعه و انتخاب راهکار مناسب، فایل CAD و مشخصات کاربرد را برای ما ارسال کنید.',
+          thermo: 'خدمات VeltriX شامل طراحی و ساخت ابزارهای ترموفرمینگ و قالب‌های دایکست برای شکل‌دهی دقیق قطعات پلاستیکی و فلزی است. فایل CAD یا مشخصات قطعه خود را ارسال کنید تا درباره انتخاب ابزار، جزئیات فنی و مسیر ساخت پروژه راهنمایی بگیرید.'
+        },
+        en: {
+          injection: 'VeltriX provides custom plastic injection mold manufacturing with attention to material flow, cooling, venting, and part ejection for repeatable production. Send us your part file or requirements to discuss moldability, material selection, and the next step for your project.',
+          hotrunner: 'Hot runner molds keep polymer melt liquid in heated manifolds and nozzles, while valve-gate molds use mechanically actuated pins to control each gate’s opening and closing. Choose the configuration for your resin, part geometry, and production needs to evaluate controlled filling and lower runner scrap.',
+          medical: 'VeltriX provides injection molds for medical components and plastic packaging, with the design selected around part geometry, resin, and production requirements. For thin-wall containers, closures, PET bottle preforms, and precision parts, send your CAD file to review suitable multi-cavity or hot-runner options.',
+          auto: 'VeltriX develops automotive and appliance molds for accurate, repeatable plastic-part production. Send your CAD file and part requirements to discuss suitable mold design, cooling, gating, and ejection options.',
+          thermo: 'VeltriX provides thermoforming tooling and die-casting dies for forming plastic sheets and cast-metal components. Send your CAD file or part requirements to discuss tool design, manufacturability, and the right next step for your project.'
+        },
+        tr: {
+          injection: 'VeltriX, tekrarlanabilir üretim için malzeme akışı, soğutma, havalandırma ve parçanın kalıptan çıkarılmasını dikkate alan özel plastik enjeksiyon kalıpları üretir. Parça dosyanızı veya gereksinimlerinizi göndererek kalıplanabilirlik, malzeme seçimi ve projenizin sonraki adımını görüşebilirsiniz.',
+          hotrunner: 'Sıcak yolluklu kalıplar polimer eriyiğini ısıtılmış manifold ve memelerde sıvı tutar; valf kapılı kalıplar ise her kapının açılıp kapanmasını mekanik pimlerle kontrol eder. Konfigürasyon reçinenize, parça geometrinize ve üretim ihtiyacınıza göre seçilerek dolum kontrolü ve yolluk firesi değerlendirilir.',
+          medical: 'VeltriX, tıbbi parçalar ve plastik ambalajlar için parça geometrisi, reçine ve üretim gereksinimlerine göre enjeksiyon kalıpları sunar. İnce cidarlı kaplar, kapaklar, PET şişe ön kalıpları veya hassas parçalarınız için CAD dosyanızı göndererek çok gözlü ve sıcak yolluk seçeneklerini değerlendirin.',
+          auto: 'VeltriX, otomotiv ve beyaz eşya parçalarının doğru ve tekrarlanabilir üretimi için kalıplar geliştirir. Uygun kalıp tasarımı, soğutma, yolluk ve itici seçeneklerini görüşmek için CAD dosyanızı ve parça gereksinimlerinizi bize gönderin.',
+          thermo: 'VeltriX, plastik levhaların termoformlanması ve döküm metal parçaların üretimi için termoform kalıpları ile basınçlı döküm kalıpları sunar. CAD dosyanızı veya parça gereksinimlerinizi göndererek kalıp tasarımı, üretilebilirlik ve projeniz için uygun sonraki adım hakkında bilgi alın.'
+        },
+        ar: {
+          injection: 'تقدم VeltriX تصنيع قوالب حقن بلاستيكية مخصصة مع مراعاة تدفق المادة والتبريد والتنفيـس وإخراج القطعة لتحقيق إنتاج متكرر. أرسل ملف القطعة أو متطلباتك لمناقشة قابلية التصنيع واختيار المادة والخطوة التالية لمشروعك.',
+          hotrunner: 'تحافظ قوالب المجرى الساخن على بقاء مصهور البوليمر سائلاً داخل المنايفولد والفوهات المسخّنة، بينما تتحكم قوالب البوابة الصمامية بفتح كل بوابة وإغلاقها عبر دبابيس ميكانيكية. اختَر التهيئة وفق الراتنج وهندسة القطعة ومتطلبات الإنتاج لتقييم التحكم في الملء وتقليل هدر المجرى.',
+          medical: 'تقدم VeltriX قوالب حقن للمكوّنات الطبية والتغليف البلاستيكي، مع اختيار التصميم وفق هندسة القطعة ونوع الراتنج ومتطلبات الإنتاج. للحاويات رقيقة الجدار والأغطية ومسبقات زجاجات PET والقطع الدقيقة، أرسل ملف CAD لمراجعة خيارات القوالب متعددة التجاويف أو ذات المجرى الساخن.',
+          auto: 'تطوّر VeltriX قوالب السيارات والأجهزة المنزلية لإنتاج قطع بلاستيكية دقيقة ومتكررة الجودة. أرسل ملف CAD ومتطلبات القطعة لمناقشة خيارات تصميم القالب والتبريد والتغذية والإخراج المناسبة.',
+          thermo: 'تقدّم VeltriX أدوات التشكيل الحراري وقوالب الصب بالقالب لتشكيل الصفائح البلاستيكية وإنتاج المكوّنات المعدنية المصبوبة. أرسل ملف CAD أو متطلبات القطعة لمناقشة تصميم الأداة وقابلية التصنيع والخطوة المناسبة لمشروعك.'
+        },
+        az: {
+          injection: 'VeltriX təkrarlana bilən istehsal üçün material axını, soyutma, havalandırma və detalın qəlibdən çıxarılmasını nəzərə alan xüsusi plastik inyeksiya qəlibləri hazırlayır. Detal faylınızı və ya tələblərinizi göndərin, qəliblənmə imkanlarını, material seçimini və layihənizin növbəti mərhələsini müzakirə edək.',
+          hotrunner: 'İsti kanallı qəliblər polimer ərintisini qızdırılan manifold və ucluqlarda maye saxlayır, klapanlı qapı qəlibləri isə hər qapının açılıb-bağlanmasını mexaniki millərlə idarə edir. Qəlib həlli xammalınıza, detalın həndəsəsinə və istehsal tələbinizə uyğun seçilərək dolmanın idarə olunması və kanal tullantısının azalması qiymətləndirilir.',
+          medical: 'VeltriX tibbi komponentlər və plastik qablaşdırma üçün detalın həndəsəsinə, materialına və istehsal tələblərinə uyğun enjeksiyon qəlibləri təklif edir. İncə divarlı qablar, qapaqlar, PET butulka preformları və dəqiq detallar üçün CAD faylınızı göndərin ki, çoxyuvalı və isti kanallı qəlib variantlarını nəzərdən keçirək.',
+          auto: 'VeltriX avtomobil və məişət texnikası hissələrinin dəqiq və təkrarlanan istehsalı üçün qəliblər hazırlayır. Uyğun qəlib dizaynı, soyutma, giriş kanalı və çıxarıcı seçimlərini müzakirə etmək üçün CAD faylınızı və detal tələblərinizi bizə göndərin.',
+          thermo: 'VeltriX plastik vərəqlərin termoforminqi və tökmə metal hissələrin istehsalı üçün termoform alətləri və təzyiqli tökmə qəlibləri təqdim edir. CAD faylınızı və ya detal tələblərinizi göndərin ki, alət dizaynı, istehsala yararlılıq və layihəniz üçün uyğun növbəti addım barədə məsləhət alasınız.'
+        }
       };
-      return send(env, chatId, prompts[lang] || prompts.en, {
+      return send(env, chatId, (prompts[lang] || prompts.en)[serviceId] || (prompts.en)[serviceId], {
         reply_markup: backMenu(lang)
       });
     }
