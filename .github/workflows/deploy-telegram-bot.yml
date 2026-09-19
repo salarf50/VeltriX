@@ -47,3 +47,15 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: printf '%s' "$WEBHOOK_SECRET" | npx wrangler secret put WEBHOOK_SECRET --config wrangler.toml
+
+      - name: Register Telegram webhook
+        shell: bash
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+        run: |
+          curl --fail-with-body --silent --show-error --retry 3 \
+            --request POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
+            --data-urlencode "url=https://veltrix-telegram-bot.ali-fayyazi439.workers.dev/telegram/${WEBHOOK_SECRET}" \
+            --data-urlencode "secret_token=${WEBHOOK_SECRET}" \
+            --data-urlencode "allowed_updates=[\"message\",\"callback_query\"]"
