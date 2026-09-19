@@ -9,3 +9,7 @@ id = "cfccb3410e0e44648a5636f937884350"
 
 [ai]
 binding = "AI"
+
+[triggers]
+# 09:00 Asia/Tehran is 05:30 UTC.
+crons = ["30 5 * * *"]

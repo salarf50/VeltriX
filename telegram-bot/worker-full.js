@@ -164,6 +164,20 @@ function backMenu(lang) {
   return { inline_keyboard: [[{ text: labels[lang] || labels.en, callback_data: 'back:menu' }]] };
 }
 
+function adminLeadKeyboard(lead) {
+  const id = String(lead.chat_id);
+  return {
+    inline_keyboard: [
+      [{ text: '✉️ پاسخ به مشتری', callback_data: `admin:reply:${id}` }],
+      [
+        { text: '📞 تماس شد', callback_data: `admin:status:${id}:contacted` },
+        { text: '🔧 در حال پیگیری', callback_data: `admin:status:${id}:in_progress` }
+      ],
+      [{ text: '✅ اتمام کار مشتری', callback_data: `admin:status:${id}:done` }]
+    ]
+  };
+}
+
 async function telegram(env, method, body) {
   try {
     const res = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, {
@@ -212,6 +226,46 @@ async function getLanguage(env, chatId) {
 async function setLanguage(env, chatId, lang) {
   if (!env.LEADS_KV) return;
   await env.LEADS_KV.put(`language:${chatId}`, normalizeLanguage(lang), { expirationTtl: 60 * 60 * 24 * 90 });
+}
+
+async function updateLeadStatus(env, chatId, status) {
+  if (!env.LEADS_KV) return null;
+  const latestKey = await env.LEADS_KV.get(`latest:${chatId}`);
+  if (!latestKey) return null;
+  const raw = await env.LEADS_KV.get(latestKey);
+  if (!raw) return null;
+  const lead = JSON.parse(raw);
+  lead.status = status;
+  lead.status_updated_at = new Date().toISOString();
+  await env.LEADS_KV.put(latestKey, JSON.stringify(lead));
+  return lead;
+}
+
+async function sendDailyReminder(env) {
+  if (!env.LEADS_KV) return;
+  const listed = await env.LEADS_KV.list({ prefix: 'lead:', limit: 1000 });
+  const leads = [];
+  for (const key of listed.keys || []) {
+    const raw = await env.LEADS_KV.get(key.name);
+    if (!raw) continue;
+    try {
+      const lead = JSON.parse(raw);
+      if (!['done', 'closed', 'completed'].includes(lead.status)) leads.push(lead);
+    } catch {}
+  }
+
+  leads.sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
+  if (!leads.length) {
+    await send(env, ADMIN_CHAT_ID, '☀️ یادآوری روزانه\n\nدر حال حاضر مشتریِ باز و نیازمند پیگیری وجود ندارد.');
+    return;
+  }
+
+  await send(env, ADMIN_CHAT_ID, `☀️ <b>یادآوری روزانه مشتری‌ها</b>\nتعداد پرونده‌های باز: <b>${leads.length}</b>\nبرای هر مشتری از دکمه‌های زیر استفاده کنید.`);
+  for (const lead of leads.slice(0, 40)) {
+    const status = lead.status || 'new';
+    const text = `👤 <b>${lead.name || 'بدون نام'}</b>\n🏢 ${lead.collected?.company || '-'}\n🌍 ${lead.collected?.country || '-'}\n📌 وضعیت: <b>${status}</b>\n🕒 ${lead.date || '-'}\n🆔 <code>${lead.chat_id}</code>`;
+    await send(env, ADMIN_CHAT_ID, text, { reply_markup: adminLeadKeyboard(lead) });
+  }
 }
 
 async function analyzeAndTranslate(env, text) {
@@ -289,7 +343,7 @@ ${lead.file_id ? `File ID: <code>${lead.file_id}</code>` : ''}
 برای تغییر وضعیت:
 <code>/status ${lead.chat_id} contacted</code>
 `;
-    await send(env, ADMIN_CHAT_ID, msg);
+    await send(env, ADMIN_CHAT_ID, msg, { reply_markup: adminLeadKeyboard(lead) });
     await forwardLeadMedia(env, lead);
   } catch (e) {
     console.error('saveLead error:', e);
@@ -343,6 +397,17 @@ async function processUpdate(env, update) {
   if (update.message && String(update.message.chat.id) === String(ADMIN_CHAT_ID)) {
     const text = update.message.text || '';
 
+    if (env.LEADS_KV && text && !text.startsWith('/')) {
+      const replyTarget = await env.LEADS_KV.get(`admin:reply:${ADMIN_CHAT_ID}`);
+      if (replyTarget) {
+        await send(env, replyTarget, text);
+        await env.LEADS_KV.delete(`admin:reply:${ADMIN_CHAT_ID}`);
+        await updateLeadStatus(env, replyTarget, 'contacted');
+        await send(env, ADMIN_CHAT_ID, `✅ پاسخ برای مشتری <code>${replyTarget}</code> ارسال شد و وضعیت به «تماس شد» تغییر کرد.`);
+        return;
+      }
+    }
+
     if (text.startsWith('/reply ')) {
       const parts = text.split(' ');
       const targetId = parts[1];
@@ -377,6 +442,25 @@ async function processUpdate(env, update) {
     const q = update.callback_query;
     const chatId = q.message.chat.id;
     await telegram(env, 'answerCallbackQuery', { callback_query_id: q.id });
+
+    if (String(chatId) === String(ADMIN_CHAT_ID) && q.data.startsWith('admin:')) {
+      const parts = q.data.split(':');
+      const action = parts[1];
+      const targetId = parts[2];
+      if (action === 'reply' && targetId) {
+        if (env.LEADS_KV) await env.LEADS_KV.put(`admin:reply:${ADMIN_CHAT_ID}`, targetId, { expirationTtl: 60 * 60 * 2 });
+        return send(env, ADMIN_CHAT_ID, `✍️ متن پاسخ برای مشتری <code>${targetId}</code> را در پیام بعدی ارسال کنید.`);
+      }
+      if (action === 'status' && targetId && parts[3]) {
+        const status = parts[3];
+        const lead = await updateLeadStatus(env, targetId, status);
+        const labels = { contacted: 'تماس شد', in_progress: 'در حال پیگیری', done: 'اتمام کار' };
+        return send(env, ADMIN_CHAT_ID, lead
+          ? `✅ وضعیت مشتری <code>${targetId}</code> به «${labels[status] || status}» تغییر کرد.`
+          : `⚠️ لید مشتری <code>${targetId}</code> پیدا نشد.`);
+      }
+      return;
+    }
 
     if (q.data.startsWith('lang:')) {
       const selected = normalizeLanguage(q.data.slice(5));
@@ -583,5 +667,9 @@ export default {
       console.error('Worker error:', e);
       return new Response('ok');
     }
+  },
+
+  async scheduled(controller, env, ctx) {
+    ctx.waitUntil(sendDailyReminder(env));
   }
 };
