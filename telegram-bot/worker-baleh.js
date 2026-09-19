@@ -1,7 +1,7 @@
 // ==========================================
 // آیدی ادمین تنظیم شده
 // ==========================================
-const DEFAULT_ADMIN_CHAT_ID = "93648454";
+const DEFAULT_ADMIN_CHAT_ID = "1602861730";
 function adminChatId(env) {
   return String(env.BALEH_ADMIN_CHAT_ID || DEFAULT_ADMIN_CHAT_ID);
 }
