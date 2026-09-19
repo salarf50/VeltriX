@@ -761,7 +761,7 @@ export default {
   },
 
   async scheduled(controller, env, ctx) {
-    if (controller.cron === '30 5 * * 0') {
+    if (controller.cron === '31 5 * * 1') {
       ctx.waitUntil(weeklyReview(env));
     } else {
       ctx.waitUntil(sendDailyReminder(env));
