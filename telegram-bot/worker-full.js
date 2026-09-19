@@ -285,9 +285,25 @@ ${lead.file_id ? `File ID: <code>${lead.file_id}</code>` : ''}
 <code>/status ${lead.chat_id} contacted</code>
 `;
     await send(env, ADMIN_CHAT_ID, msg);
+    await forwardLeadMedia(env, lead);
   } catch (e) {
     console.error('saveLead error:', e);
   }
+}
+
+async function forwardLeadMedia(env, lead) {
+  if (!lead.file_id || !lead.media_type) return;
+  const payload = { chat_id: ADMIN_CHAT_ID };
+  if (lead.media_type === 'photo') payload.photo = lead.file_id;
+  else if (lead.media_type === 'document') payload.document = lead.file_id;
+  else if (lead.media_type === 'video') payload.video = lead.file_id;
+  else if (lead.media_type === 'audio') payload.audio = lead.file_id;
+  else if (lead.media_type === 'voice') payload.voice = lead.file_id;
+  else if (lead.media_type === 'animation') payload.animation = lead.file_id;
+  else return;
+
+  const result = await telegram(env, `send${lead.media_type[0].toUpperCase()}${lead.media_type.slice(1)}`, payload);
+  if (!result?.ok) console.error('Lead media forwarding failed:', result);
 }
 
 async function aiReply(env, lang, text, state = null) {
@@ -398,11 +414,16 @@ async function processUpdate(env, update) {
     return send(env, chatId, t(lang).welcome, { reply_markup: menu(lang) });
   }
 
-  const hasMedia = !!(msg.photo || msg.document || msg.video);
+  const hasMedia = !!(msg.photo || msg.document || msg.video || msg.audio || msg.voice || msg.animation);
   let fileId = null;
+  let mediaType = null;
   if (msg.photo) fileId = msg.photo[msg.photo.length - 1].file_id;
-  else if (msg.document) fileId = msg.document.file_id;
-  else if (msg.video) fileId = msg.video.file_id;
+  if (msg.photo) mediaType = 'photo';
+  else if (msg.document) { fileId = msg.document.file_id; mediaType = 'document'; }
+  else if (msg.video) { fileId = msg.video.file_id; mediaType = 'video'; }
+  else if (msg.audio) { fileId = msg.audio.file_id; mediaType = 'audio'; }
+  else if (msg.voice) { fileId = msg.voice.file_id; mediaType = 'voice'; }
+  else if (msg.animation) { fileId = msg.animation.file_id; mediaType = 'animation'; }
 
   let state = await getState(env, chatId);
 
@@ -442,6 +463,7 @@ async function processUpdate(env, update) {
         text: fullText,
         has_media: hasMedia,
         file_id: fileId,
+        media_type: mediaType,
         date: new Date().toISOString(),
         channel: 'telegram',
         collected: state.data
@@ -460,6 +482,7 @@ async function processUpdate(env, update) {
       text: text || '(فایل ارسال شده)',
       has_media: true,
       file_id: fileId,
+      media_type: mediaType,
       date: new Date().toISOString(),
       channel: 'telegram'
     });
