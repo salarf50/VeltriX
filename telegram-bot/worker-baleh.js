@@ -1,7 +1,10 @@
 // ==========================================
 // آیدی ادمین تنظیم شده
 // ==========================================
-const ADMIN_CHAT_ID = "93648454";
+const DEFAULT_ADMIN_CHAT_ID = "93648454";
+function adminChatId(env) {
+  return String(env.BALEH_ADMIN_CHAT_ID || DEFAULT_ADMIN_CHAT_ID);
+}
 
 // بقیه را در Cloudflare به صورت Secret تنظیم کن:
 // BALEH_BOT_TOKEN  → توکن ربات
@@ -257,15 +260,15 @@ async function sendDailyReminder(env) {
 
   leads.sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
   if (!leads.length) {
-    await send(env, ADMIN_CHAT_ID, '☀️ یادآوری روزانه\n\nدر حال حاضر مشتریِ باز و نیازمند پیگیری وجود ندارد.');
+    await send(env, adminChatId(env), '☀️ یادآوری روزانه\n\nدر حال حاضر مشتریِ باز و نیازمند پیگیری وجود ندارد.');
     return;
   }
 
-  await send(env, ADMIN_CHAT_ID, `☀️ <b>یادآوری روزانه مشتری‌ها</b>\nتعداد پرونده‌های باز: <b>${leads.length}</b>\nبرای هر مشتری از دکمه‌های زیر استفاده کنید.`);
+  await send(env, adminChatId(env), `☀️ <b>یادآوری روزانه مشتری‌ها</b>\nتعداد پرونده‌های باز: <b>${leads.length}</b>\nبرای هر مشتری از دکمه‌های زیر استفاده کنید.`);
   for (const lead of leads.slice(0, 40)) {
     const status = lead.status || 'new';
     const text = `👤 <b>${lead.name || 'بدون نام'}</b>\n🏢 ${lead.collected?.company || '-'}\n🌍 ${lead.collected?.country || '-'}\n📌 وضعیت: <b>${status}</b>\n🕒 ${lead.date || '-'}\n🆔 <code>${lead.chat_id}</code>`;
-    await send(env, ADMIN_CHAT_ID, text, { reply_markup: adminLeadKeyboard(lead) });
+    await send(env, adminChatId(env), text, { reply_markup: adminLeadKeyboard(lead) });
   }
 }
 
@@ -303,11 +306,11 @@ async function weeklyReview(env) {
     } catch {}
   }
   if (!completed.length) {
-    await send(env, ADMIN_CHAT_ID, '📊 گزارش هفتگی\n\nهنوز مشتری تکمیل‌شده‌ای برای تحلیل هفتگی وجود ندارد.');
+    await send(env, adminChatId(env), '📊 گزارش هفتگی\n\nهنوز مشتری تکمیل‌شده‌ای برای تحلیل هفتگی وجود ندارد.');
     return;
   }
 
-  await send(env, ADMIN_CHAT_ID, `📊 <b>گزارش هفتگی مشتری‌ها</b>\nتعداد مشتری‌های تکمیل‌شده: <b>${completed.length}</b>`);
+  await send(env, adminChatId(env), `📊 <b>گزارش هفتگی مشتری‌ها</b>\nتعداد مشتری‌های تکمیل‌شده: <b>${completed.length}</b>`);
   for (const { lead, survey } of completed.slice(0, 40)) {
     let review = `نقاط قوت: دریافت موفق درخواست مشتری و تکمیل پرونده\nنقاط ضعف: داده کافی برای تحلیل دقیق وجود ندارد\nاقدام پیشنهادی: یک پیگیری کوتاه برای دریافت بازخورد بیشتر`;
     if (env.AI) {
@@ -319,7 +322,7 @@ async function weeklyReview(env) {
         review = result?.response || review;
       } catch {}
     }
-    await send(env, ADMIN_CHAT_ID, `👤 <b>${lead.name || 'بدون نام'}</b>\n🏢 ${lead.collected?.company || '-'}\n⭐ امتیاز رضایت: ${survey.rating || 'ثبت نشده'}\n\n${review}`, { reply_markup: adminLeadKeyboard(lead) });
+    await send(env, adminChatId(env), `👤 <b>${lead.name || 'بدون نام'}</b>\n🏢 ${lead.collected?.company || '-'}\n⭐ امتیاز رضایت: ${survey.rating || 'ثبت نشده'}\n\n${review}`, { reply_markup: adminLeadKeyboard(lead) });
   }
 }
 
@@ -398,7 +401,7 @@ ${lead.file_id ? `File ID: <code>${lead.file_id}</code>` : ''}
 برای تغییر وضعیت:
 <code>/status ${lead.chat_id} contacted</code>
 `;
-    await send(env, ADMIN_CHAT_ID, msg, { reply_markup: adminLeadKeyboard(lead) });
+    await send(env, adminChatId(env), msg, { reply_markup: adminLeadKeyboard(lead) });
     await forwardLeadMedia(env, lead);
   } catch (e) {
     console.error('saveLead error:', e);
@@ -407,7 +410,7 @@ ${lead.file_id ? `File ID: <code>${lead.file_id}</code>` : ''}
 
 async function forwardLeadMedia(env, lead) {
   if (!lead.file_id || !lead.media_type) return;
-  const payload = { chat_id: ADMIN_CHAT_ID };
+  const payload = { chat_id: adminChatId(env) };
   if (lead.media_type === 'photo') payload.photo = lead.file_id;
   else if (lead.media_type === 'document') payload.document = lead.file_id;
   else if (lead.media_type === 'video') payload.video = lead.file_id;
@@ -448,17 +451,22 @@ STRICT RULES:
 }
 
 async function processUpdate(env, update) {
+  if (update.message?.text === '/id') {
+    await send(env, update.message.chat.id, `شناسهٔ این گفت‌وگو: <code>${update.message.chat.id}</code>`);
+    return;
+  }
+
   // دستورات ادمین
-  if (update.message && String(update.message.chat.id) === String(ADMIN_CHAT_ID)) {
+  if (update.message && String(update.message.chat.id) === String(adminChatId(env))) {
     const text = update.message.text || '';
 
     if (env.LEADS_KV && text && !text.startsWith('/')) {
-      const replyTarget = await env.LEADS_KV.get(`admin:reply:${ADMIN_CHAT_ID}`);
+      const replyTarget = await env.LEADS_KV.get(`admin:reply:${adminChatId(env)}`);
       if (replyTarget) {
         await send(env, replyTarget, text);
-        await env.LEADS_KV.delete(`admin:reply:${ADMIN_CHAT_ID}`);
+        await env.LEADS_KV.delete(`admin:reply:${adminChatId(env)}`);
         await updateLeadStatus(env, replyTarget, 'contacted');
-        await send(env, ADMIN_CHAT_ID, `✅ پاسخ برای مشتری <code>${replyTarget}</code> ارسال شد و وضعیت به «تماس شد» تغییر کرد.`);
+        await send(env, adminChatId(env), `✅ پاسخ برای مشتری <code>${replyTarget}</code> ارسال شد و وضعیت به «تماس شد» تغییر کرد.`);
         return;
       }
     }
@@ -469,7 +477,7 @@ async function processUpdate(env, update) {
       const replyText = parts.slice(2).join(' ').trim();
       if (targetId && replyText) {
         await send(env, targetId, replyText);
-        await send(env, ADMIN_CHAT_ID, `✅ پیام برای <code>${targetId}</code> ارسال شد.`);
+        await send(env, adminChatId(env), `✅ پیام برای <code>${targetId}</code> ارسال شد.`);
       }
       return;
     }
@@ -484,7 +492,7 @@ async function processUpdate(env, update) {
           const lead = JSON.parse(await env.LEADS_KV.get(latestKey));
           lead.status = newStatus;
           await env.LEADS_KV.put(latestKey, JSON.stringify(lead));
-          await send(env, ADMIN_CHAT_ID, `✅ وضعیت لید <code>${targetId}</code> به <b>${newStatus}</b> تغییر کرد.`);
+          await send(env, adminChatId(env), `✅ وضعیت لید <code>${targetId}</code> به <b>${newStatus}</b> تغییر کرد.`);
         }
       }
       return;
@@ -498,18 +506,18 @@ async function processUpdate(env, update) {
     const chatId = q.message.chat.id;
     await telegram(env, 'answerCallbackQuery', { callback_query_id: q.id });
 
-    if (String(chatId) === String(ADMIN_CHAT_ID) && q.data.startsWith('admin:')) {
+    if (String(chatId) === String(adminChatId(env)) && q.data.startsWith('admin:')) {
       const parts = q.data.split(':');
       const action = parts[1];
       const targetId = parts[2];
       if (action === 'reply' && targetId) {
-        if (env.LEADS_KV) await env.LEADS_KV.put(`admin:reply:${ADMIN_CHAT_ID}`, targetId, { expirationTtl: 60 * 60 * 2 });
-        return send(env, ADMIN_CHAT_ID, `✍️ متن پاسخ برای مشتری <code>${targetId}</code> را در پیام بعدی ارسال کنید.`);
+        if (env.LEADS_KV) await env.LEADS_KV.put(`admin:reply:${adminChatId(env)}`, targetId, { expirationTtl: 60 * 60 * 2 });
+        return send(env, adminChatId(env), `✍️ متن پاسخ برای مشتری <code>${targetId}</code> را در پیام بعدی ارسال کنید.`);
       }
       if (action === 'followup' && targetId) {
-        if (env.LEADS_KV) await env.LEADS_KV.put(`admin:reply:${ADMIN_CHAT_ID}`, targetId, { expirationTtl: 60 * 60 * 2 });
+        if (env.LEADS_KV) await env.LEADS_KV.put(`admin:reply:${adminChatId(env)}`, targetId, { expirationTtl: 60 * 60 * 2 });
         await updateLeadStatus(env, targetId, 'in_progress');
-        return send(env, ADMIN_CHAT_ID, `🔁 متن پیگیری مشتری <code>${targetId}</code> را در پیام بعدی ارسال کنید.`);
+        return send(env, adminChatId(env), `🔁 متن پیگیری مشتری <code>${targetId}</code> را در پیام بعدی ارسال کنید.`);
       }
       if (action === 'status' && targetId && parts[3]) {
         const status = parts[3];
@@ -526,7 +534,7 @@ async function processUpdate(env, update) {
           };
           await send(env, targetId, surveyText[surveyLang] || surveyText.fa, { reply_markup: surveyKeyboard() });
         }
-        return send(env, ADMIN_CHAT_ID, lead
+        return send(env, adminChatId(env), lead
           ? `✅ وضعیت مشتری <code>${targetId}</code> به «${labels[status] || status}» تغییر کرد.`
           : `⚠️ لید مشتری <code>${targetId}</code> پیدا نشد.`);
       }
