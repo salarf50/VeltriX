@@ -173,7 +173,8 @@ function adminLeadKeyboard(lead) {
         { text: '📞 تماس شد', callback_data: `admin:status:${id}:contacted` },
         { text: '🔧 در حال پیگیری', callback_data: `admin:status:${id}:in_progress` }
       ],
-      [{ text: '✅ اتمام کار مشتری', callback_data: `admin:status:${id}:done` }]
+      [{ text: '✅ اتمام کار مشتری', callback_data: `admin:status:${id}:done` }],
+      [{ text: '🔁 پیگیری مشتری', callback_data: `admin:followup:${id}` }]
     ]
   };
 }
@@ -265,6 +266,60 @@ async function sendDailyReminder(env) {
     const status = lead.status || 'new';
     const text = `👤 <b>${lead.name || 'بدون نام'}</b>\n🏢 ${lead.collected?.company || '-'}\n🌍 ${lead.collected?.country || '-'}\n📌 وضعیت: <b>${status}</b>\n🕒 ${lead.date || '-'}\n🆔 <code>${lead.chat_id}</code>`;
     await send(env, ADMIN_CHAT_ID, text, { reply_markup: adminLeadKeyboard(lead) });
+  }
+}
+
+function surveyKeyboard() {
+  return {
+    inline_keyboard: [
+      [{ text: '⭐️ 1', callback_data: 'survey:1' }, { text: '⭐️ 2', callback_data: 'survey:2' }, { text: '⭐️ 3', callback_data: 'survey:3' }],
+      [{ text: '⭐️ 4', callback_data: 'survey:4' }, { text: '⭐️ 5', callback_data: 'survey:5' }],
+      [{ text: 'بدون نظر', callback_data: 'survey:skip' }]
+    ]
+  };
+}
+
+async function saveSurvey(env, chatId, survey) {
+  if (!env.LEADS_KV) return;
+  const key = `survey:${Date.now()}:${chatId}`;
+  await env.LEADS_KV.put(key, JSON.stringify({ chat_id: chatId, ...survey, date: new Date().toISOString() }));
+  await env.LEADS_KV.put(`latest_survey:${chatId}`, key);
+}
+
+async function weeklyReview(env) {
+  if (!env.LEADS_KV) return;
+  const listed = await env.LEADS_KV.list({ prefix: 'lead:', limit: 1000 });
+  const completed = [];
+  for (const key of listed.keys || []) {
+    const raw = await env.LEADS_KV.get(key.name);
+    if (!raw) continue;
+    try {
+      const lead = JSON.parse(raw);
+      if (lead.status === 'done') {
+        const surveyKey = await env.LEADS_KV.get(`latest_survey:${lead.chat_id}`);
+        const survey = surveyKey ? JSON.parse(await env.LEADS_KV.get(surveyKey) || '{}') : {};
+        completed.push({ lead, survey });
+      }
+    } catch {}
+  }
+  if (!completed.length) {
+    await send(env, ADMIN_CHAT_ID, '📊 گزارش هفتگی\n\nهنوز مشتری تکمیل‌شده‌ای برای تحلیل هفتگی وجود ندارد.');
+    return;
+  }
+
+  await send(env, ADMIN_CHAT_ID, `📊 <b>گزارش هفتگی مشتری‌ها</b>\nتعداد مشتری‌های تکمیل‌شده: <b>${completed.length}</b>`);
+  for (const { lead, survey } of completed.slice(0, 40)) {
+    let review = `نقاط قوت: دریافت موفق درخواست مشتری و تکمیل پرونده\nنقاط ضعف: داده کافی برای تحلیل دقیق وجود ندارد\nاقدام پیشنهادی: یک پیگیری کوتاه برای دریافت بازخورد بیشتر`;
+    if (env.AI) {
+      try {
+        const result = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', { messages: [
+          { role: 'system', content: 'به فارسی و کوتاه، فقط در سه خط با برچسب‌های «نقاط قوت»، «نقاط ضعف»، «اقدام پیشنهادی» گزارش بده. از ادعای بدون داده خودداری کن.' },
+          { role: 'user', content: JSON.stringify({ lead: { company: lead.collected?.company, country: lead.collected?.country, part: lead.collected?.part, volume: lead.collected?.volume, sentiment: lead.sentiment, status: lead.status }, survey }) }
+        ] });
+        review = result?.response || review;
+      } catch {}
+    }
+    await send(env, ADMIN_CHAT_ID, `👤 <b>${lead.name || 'بدون نام'}</b>\n🏢 ${lead.collected?.company || '-'}\n⭐ امتیاز رضایت: ${survey.rating || 'ثبت نشده'}\n\n${review}`, { reply_markup: adminLeadKeyboard(lead) });
   }
 }
 
@@ -451,13 +506,44 @@ async function processUpdate(env, update) {
         if (env.LEADS_KV) await env.LEADS_KV.put(`admin:reply:${ADMIN_CHAT_ID}`, targetId, { expirationTtl: 60 * 60 * 2 });
         return send(env, ADMIN_CHAT_ID, `✍️ متن پاسخ برای مشتری <code>${targetId}</code> را در پیام بعدی ارسال کنید.`);
       }
+      if (action === 'followup' && targetId) {
+        if (env.LEADS_KV) await env.LEADS_KV.put(`admin:reply:${ADMIN_CHAT_ID}`, targetId, { expirationTtl: 60 * 60 * 2 });
+        await updateLeadStatus(env, targetId, 'in_progress');
+        return send(env, ADMIN_CHAT_ID, `🔁 متن پیگیری مشتری <code>${targetId}</code> را در پیام بعدی ارسال کنید.`);
+      }
       if (action === 'status' && targetId && parts[3]) {
         const status = parts[3];
         const lead = await updateLeadStatus(env, targetId, status);
         const labels = { contacted: 'تماس شد', in_progress: 'در حال پیگیری', done: 'اتمام کار' };
+        if (status === 'done' && lead) {
+          const surveyLang = (await getLanguage(env, targetId)) || 'fa';
+          const surveyText = {
+            fa: 'از همکاری شما سپاسگزاریم. لطفاً میزان رضایت خود از پیگیری و خدمات VeltriX را از ۱ تا ۵ امتیاز دهید.',
+            en: 'Thank you for working with us. Please rate your satisfaction with VeltriX from 1 to 5.',
+            tr: 'İş birliğiniz için teşekkürler. VeltriX hizmetinden memnuniyetinizi 1 ile 5 arasında puanlayın.',
+            ar: 'شكراً لتعاونكم معنا. يرجى تقييم رضاكم عن خدمة VeltriX من 1 إلى 5.',
+            az: 'Əməkdaşlığınız üçün təşəkkür edirik. VeltriX xidmətindən məmnuniyyətinizi 1-dən 5-ə qədər qiymətləndirin.'
+          };
+          await send(env, targetId, surveyText[surveyLang] || surveyText.fa, { reply_markup: surveyKeyboard() });
+        }
         return send(env, ADMIN_CHAT_ID, lead
           ? `✅ وضعیت مشتری <code>${targetId}</code> به «${labels[status] || status}» تغییر کرد.`
           : `⚠️ لید مشتری <code>${targetId}</code> پیدا نشد.`);
+      }
+      return;
+    }
+
+    if (q.data.startsWith('survey:')) {
+      const value = q.data.slice('survey:'.length);
+      if (value === 'skip') {
+        await saveSurvey(env, chatId, { rating: null, comment: '' });
+        await clearState(env, chatId);
+        return send(env, chatId, 'ممنون از همراهی شما.');
+      }
+      const rating = Number(value);
+      if (rating >= 1 && rating <= 5) {
+        await setState(env, chatId, { step: 'survey_comment', data: { rating } });
+        return send(env, chatId, 'اگر مایل هستید، نظر کوتاه خود را هم بنویسید؛ در غیر این صورت «بدون نظر» را ارسال کنید.');
       }
       return;
     }
@@ -560,6 +646,11 @@ async function processUpdate(env, update) {
 
   // گرفتن اطلاعات مویرگی
   if (state && state.step) {
+    if (state.step === 'survey_comment') {
+      await saveSurvey(env, chatId, { rating: state.data?.rating || null, comment: text || 'بدون نظر' });
+      await clearState(env, chatId);
+      return send(env, chatId, 'ممنون از بازخورد شما؛ نظر شما برای بهبود خدمات VeltriX ثبت شد.');
+    }
     if (state.step === 'company') {
       state.data.company = text;
       state.step = 'country';
@@ -670,6 +761,10 @@ export default {
   },
 
   async scheduled(controller, env, ctx) {
-    ctx.waitUntil(sendDailyReminder(env));
+    if (controller.cron === '30 5 * * 0') {
+      ctx.waitUntil(weeklyReview(env));
+    } else {
+      ctx.waitUntil(sendDailyReminder(env));
+    }
   }
 };
