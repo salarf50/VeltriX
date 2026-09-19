@@ -54,11 +54,15 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
         run: |
+          curl --fail-with-body --silent --show-error \
+            --request POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/deleteWebhook" \
+            --data-urlencode "drop_pending_updates=false"
           curl --fail-with-body --silent --show-error --retry 3 \
             --request POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
             --data-urlencode "url=https://veltrix-telegram-bot.ali-fayyazi439.workers.dev/telegram/${WEBHOOK_SECRET}" \
             --data-urlencode "secret_token=${WEBHOOK_SECRET}" \
-            --data-urlencode "allowed_updates=[\"message\",\"callback_query\"]"
+            --data-urlencode "allowed_updates=[\"message\",\"callback_query\"]" \
+            --data-urlencode "drop_pending_updates=false"
 
       - name: Verify Telegram webhook status
         shell: bash
