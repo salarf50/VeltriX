@@ -401,11 +401,11 @@ async function processUpdate(env, update) {
     const service = t(lang).services.find(x => x[1] === serviceId);
     if (service) {
       const prompts = {
-        fa: `در مورد <b>${service[0]}</b> هر سوالی دارید بفرمایید. برای بررسی قیمت و جزئیات، از گزینهٔ بررسی پروژه استفاده کنید.`,
-        en: `Feel free to ask any question about <b>${service[0]}</b>. For a detailed review, choose Project Review.`,
-        tr: `<b>${service[0]}</b> hakkında sorularınızı sorabilirsiniz. Detaylı inceleme için Proje İncelemesini seçin.`,
-        ar: `يمكنكم طرح أي سؤال حول <b>${service[0]}</b>. للمراجعة التفصيلية اختاروا مراجعة المشروع.`,
-        az: `<b>${service[0]}</b> haqqında suallarınızı verə bilərsiniz. Ətraflı baxış üçün Layihə baxışını seçin.`
+        fa: `<b>${service[0]}</b> برای تولید قطعات دقیق و باکیفیت طراحی و ساخته می‌شود. برای بررسی نیاز فنی و دریافت راهنمایی متناسب با پروژه، گزینهٔ بررسی پروژه را انتخاب کنید.`,
+        en: `<b>${service[0]}</b> is designed and manufactured for accurate, high-quality part production. Choose Project Review for technical guidance tailored to your project.`,
+        tr: `<b>${service[0]}</b>, hassas ve yüksek kaliteli parça üretimi için tasarlanır ve üretilir. Projenize özel teknik yönlendirme için Proje İncelemesini seçin.`,
+        ar: `يتم تصميم وتصنيع <b>${service[0]}</b> لإنتاج قطع دقيقة وعالية الجودة. اختاروا مراجعة المشروع للحصول على إرشاد فني مناسب لمشروعكم.`,
+        az: `<b>${service[0]}</b> dəqiq və yüksək keyfiyyətli detalların istehsalı üçün hazırlanır və istehsal edilir. Layihənizə uyğun texniki məsləhət üçün Layihə baxışını seçin.`
       };
       return send(env, chatId, prompts[lang] || prompts.en, {
         reply_markup: backMenu(lang)
