@@ -149,6 +149,16 @@ function menu(lang) {
   };
 }
 
+function languageMenu() {
+  return {
+    inline_keyboard: [
+      [{ text: 'فارسی', callback_data: 'lang:fa' }, { text: 'English', callback_data: 'lang:en' }],
+      [{ text: 'Türkçe', callback_data: 'lang:tr' }, { text: 'العربية', callback_data: 'lang:ar' }],
+      [{ text: 'Azərbaycan dili', callback_data: 'lang:az' }]
+    ]
+  };
+}
+
 async function telegram(env, method, body) {
   try {
     const res = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, {
@@ -186,6 +196,17 @@ async function setState(env, chatId, state) {
 async function clearState(env, chatId) {
   if (!env.LEADS_KV) return;
   await env.LEADS_KV.delete(`state:${chatId}`);
+}
+
+async function getLanguage(env, chatId) {
+  if (!env.LEADS_KV) return null;
+  const saved = await env.LEADS_KV.get(`language:${chatId}`);
+  return saved ? normalizeLanguage(saved) : null;
+}
+
+async function setLanguage(env, chatId, lang) {
+  if (!env.LEADS_KV) return;
+  await env.LEADS_KV.put(`language:${chatId}`, normalizeLanguage(lang), { expirationTtl: 60 * 60 * 24 * 90 });
 }
 
 async function analyzeAndTranslate(env, text) {
@@ -334,8 +355,16 @@ async function processUpdate(env, update) {
   if (update.callback_query) {
     const q = update.callback_query;
     const chatId = q.message.chat.id;
-    const lang = normalizeLanguage(q.from?.language_code || 'en');
     await telegram(env, 'answerCallbackQuery', { callback_query_id: q.id });
+
+    if (q.data.startsWith('lang:')) {
+      const selected = normalizeLanguage(q.data.slice(5));
+      await setLanguage(env, chatId, selected);
+      await clearState(env, chatId);
+      return send(env, chatId, t(selected).welcome, { reply_markup: menu(selected) });
+    }
+
+    const lang = (await getLanguage(env, chatId)) || normalizeLanguage(q.from?.language_code || 'en');
 
     if (q.data === 'lead') {
       await setState(env, chatId, { step: 'company', data: {}, language: lang });
@@ -358,10 +387,14 @@ async function processUpdate(env, update) {
   const chatId = msg.chat.id;
   const text = (msg.text || msg.caption || '').trim();
   const from = msg.from || {};
-  const lang = text ? detectLanguage(text, from.language_code) : normalizeLanguage(from.language_code || 'en');
+  const savedLanguage = await getLanguage(env, chatId);
+  const lang = savedLanguage || (text ? detectLanguage(text, from.language_code) : normalizeLanguage(from.language_code || 'en'));
 
   if (text.startsWith('/start') || text.startsWith('/menu')) {
     await clearState(env, chatId);
+    if (!savedLanguage) {
+      return send(env, chatId, 'لطفاً زبان خود را انتخاب کنید / Please choose your language / Lütfen dilinizi seçin / يرجى اختيار اللغة', { reply_markup: languageMenu() });
+    }
     return send(env, chatId, t(lang).welcome, { reply_markup: menu(lang) });
   }
 
