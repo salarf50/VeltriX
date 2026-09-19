@@ -20,12 +20,26 @@ jobs:
     steps:
       - name: Checkout GitHub source
         uses: actions/checkout@v4
+
       - name: Validate Worker syntax
-        run: node --check worker-cloudflare.js
-      - name: Deploy to Cloudflare Workers
+        run: node --check worker-full.js
+
+      - name: Deploy Worker from GitHub source
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: telegram-bot
           command: deploy
+
+      - name: Sync Telegram bot token to Worker
+        shell: bash
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: printf '%s' "$TELEGRAM_BOT_TOKEN" | npx wrangler secret put TELEGRAM_BOT_TOKEN --config wrangler.toml
+
+      - name: Sync webhook secret to Worker
+        shell: bash
+        env:
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+        run: printf '%s' "$WEBHOOK_SECRET" | npx wrangler secret put WEBHOOK_SECRET --config wrangler.toml
