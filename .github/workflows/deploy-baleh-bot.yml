@@ -1,0 +1,75 @@
+name: Deploy VeltriX Baleh Bot
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'telegram-bot/worker-baleh.js'
+      - 'telegram-bot/wrangler-baleh.toml'
+      - '.github/workflows/deploy-baleh-bot.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: telegram-bot
+    steps:
+      - name: Checkout GitHub source
+        uses: actions/checkout@v4
+
+      - name: Validate Baleh Worker syntax
+        run: node --check worker-baleh.js
+
+      - name: Deploy Baleh Worker from GitHub source
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: telegram-bot
+          command: deploy --config wrangler-baleh.toml
+
+      - name: Sync Baleh bot token to Worker
+        shell: bash
+        env:
+          BALEH_BOT_TOKEN: ${{ secrets.BALEH_BOT_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: printf '%s' "$BALEH_BOT_TOKEN" | npx wrangler secret put BALEH_BOT_TOKEN --config wrangler-baleh.toml
+
+      - name: Sync webhook secret to Baleh Worker
+        shell: bash
+        env:
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: printf '%s' "$WEBHOOK_SECRET" | npx wrangler secret put WEBHOOK_SECRET --config wrangler-baleh.toml
+
+      - name: Register Baleh webhook
+        shell: bash
+        env:
+          BALEH_BOT_TOKEN: ${{ secrets.BALEH_BOT_TOKEN }}
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+        run: |
+          curl --fail-with-body --silent --show-error --retry 3 \
+            --request POST "https://tapi.bale.ai/bot${BALEH_BOT_TOKEN}/setWebhook" \
+            --data-urlencode "url=https://veltrix-baleh-bot.ali-fayyazi439.workers.dev/telegram/${WEBHOOK_SECRET}"
+
+      - name: Verify Baleh webhook status
+        shell: bash
+        env:
+          BALEH_BOT_TOKEN: ${{ secrets.BALEH_BOT_TOKEN }}
+        run: curl --fail-with-body --silent --show-error "https://tapi.bale.ai/bot${BALEH_BOT_TOKEN}/getWebhookInfo"
+
+      - name: Verify Baleh bot identity
+        shell: bash
+        env:
+          BALEH_BOT_TOKEN: ${{ secrets.BALEH_BOT_TOKEN }}
+        run: curl --fail-with-body --silent --show-error "https://tapi.bale.ai/bot${BALEH_BOT_TOKEN}/getMe"
+
+      - name: Verify Baleh Worker health
+        run: curl --fail-with-body --silent --show-error "https://veltrix-baleh-bot.ali-fayyazi439.workers.dev/health"

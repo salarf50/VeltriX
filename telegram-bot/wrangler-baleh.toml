@@ -1,0 +1,16 @@
+name = "veltrix-baleh-bot"
+main = "worker-baleh.js"
+compatibility_date = "2026-09-18"
+workers_dev = true
+
+[[kv_namespaces]]
+binding = "LEADS_KV"
+id = "cfccb3410e0e44648a5636f937884350"
+
+[ai]
+binding = "AI"
+
+[triggers]
+# 09:00 Asia/Tehran is 05:30 UTC.
+# Weekly review is scheduled one minute later on Sunday.
+crons = ["30 5 * * *", "31 5 * * 1"]
