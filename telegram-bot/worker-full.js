@@ -159,6 +159,11 @@ function languageMenu() {
   };
 }
 
+function backMenu(lang) {
+  const labels = { fa: 'بازگشت به منو', en: 'Back to menu', tr: 'Menüye dön', ar: 'العودة إلى القائمة', az: 'Menyuya qayıt' };
+  return { inline_keyboard: [[{ text: labels[lang] || labels.en, callback_data: 'back:menu' }]] };
+}
+
 async function telegram(env, method, body) {
   try {
     const res = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, {
@@ -387,11 +392,23 @@ async function processUpdate(env, update) {
       return send(env, chatId, t(lang).lead_start + '\n\n' + t(lang).ask_company);
     }
 
-    const serviceId = q.data.split(':')[1];
+    if (q.data === 'back:menu') {
+      return send(env, chatId, t(lang).menu, { reply_markup: menu(lang) });
+    }
+
+    if (!q.data.startsWith('service:')) return;
+    const serviceId = q.data.slice('service:'.length);
     const service = t(lang).services.find(x => x[1] === serviceId);
     if (service) {
-      return send(env, chatId, `در مورد <b>${service[0]}</b> هر سوالی دارید بفرمایید، در خدمتم.`, {
-        reply_markup: menu(lang)
+      const prompts = {
+        fa: `در مورد <b>${service[0]}</b> هر سوالی دارید بفرمایید. برای بررسی قیمت و جزئیات، از گزینهٔ بررسی پروژه استفاده کنید.`,
+        en: `Feel free to ask any question about <b>${service[0]}</b>. For a detailed review, choose Project Review.`,
+        tr: `<b>${service[0]}</b> hakkında sorularınızı sorabilirsiniz. Detaylı inceleme için Proje İncelemesini seçin.`,
+        ar: `يمكنكم طرح أي سؤال حول <b>${service[0]}</b>. للمراجعة التفصيلية اختاروا مراجعة المشروع.`,
+        az: `<b>${service[0]}</b> haqqında suallarınızı verə bilərsiniz. Ətraflı baxış üçün Layihə baxışını seçin.`
+      };
+      return send(env, chatId, prompts[lang] || prompts.en, {
+        reply_markup: backMenu(lang)
       });
     }
     return;
