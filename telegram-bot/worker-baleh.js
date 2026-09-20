@@ -178,6 +178,10 @@ function leadControls(lang, canGoBack = false) {
   return { inline_keyboard: [[...(canGoBack ? [{ text: labels.back, callback_data: 'lead:back' }] : []), { text: labels.erase, callback_data: 'memory:delete' }]] };
 }
 
+function restartKeyboard() {
+  return { keyboard: [[{ text: '/start' }]], resize_keyboard: true, one_time_keyboard: false };
+}
+
 function adminLeadKeyboard(lead) {
   const id = String(lead.chat_id);
   return {
@@ -606,15 +610,9 @@ async function processUpdate(env, update) {
         const lead = await updateLeadStatus(env, targetId, status);
         const labels = { contacted: 'تماس شد', in_progress: 'در حال پیگیری', done: 'اتمام کار' };
         if (status === 'done' && lead) {
-          const surveyLang = (await getLanguage(env, targetId)) || 'fa';
-          const surveyText = {
-            fa: 'از همکاری شما سپاسگزاریم. لطفاً میزان رضایت خود از پیگیری و خدمات VeltriX را از ۱ تا ۵ امتیاز دهید.',
-            en: 'Thank you for working with us. Please rate your satisfaction with VeltriX from 1 to 5.',
-            tr: 'İş birliğiniz için teşekkürler. VeltriX hizmetinden memnuniyetinizi 1 ile 5 arasında puanlayın.',
-            ar: 'شكراً لتعاونكم معنا. يرجى تقييم رضاكم عن خدمة VeltriX من 1 إلى 5.',
-            az: 'Əməkdaşlığınız üçün təşəkkür edirik. VeltriX xidmətindən məmnuniyyətinizi 1-dən 5-ə qədər qiymətləndirin.'
-          };
-          await send(env, targetId, surveyText[surveyLang] || surveyText.fa, { reply_markup: surveyKeyboard() });
+          const doneLang = normalizeLanguage((await getLanguage(env, targetId)) || lead.language || 'fa');
+          const doneText = { fa: '✅ کار مشتری به پایان رسید. اگر دوباره به راهنمایی نیاز داشتید، دکمهٔ /start را بزنید.', en: '✅ This customer case is complete. If you need help again, press /start.', tr: '✅ Bu müşteri süreci tamamlandı. Yeniden yardım için /start düğmesine basın.', ar: '✅ اكتملت متابعة هذا العميل. إذا احتجتم المساعدة مجدداً اضغطوا على /start.', az: '✅ Bu müştəri işi tamamlandı. Yenidən kömək üçün /start düyməsinə basın.' };
+          await send(env, targetId, doneText[doneLang] || doneText.fa, { reply_markup: restartKeyboard() });
         }
         return send(env, adminChatId(env), lead
           ? `✅ وضعیت مشتری <code>${targetId}</code> به «${labels[status] || status}» تغییر کرد.`
@@ -843,7 +841,7 @@ async function processUpdate(env, update) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     if (request.method === 'GET' && url.pathname === '/health') {
@@ -862,7 +860,7 @@ export default {
 
     try {
       const update = await request.json();
-      await processUpdate(env, update);
+      ctx.waitUntil(processUpdate(env, update));
       return new Response('ok');
     } catch (e) {
       console.error('Worker error:', e);
