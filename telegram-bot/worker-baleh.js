@@ -456,6 +456,24 @@ STRICT RULES:
   }
 }
 
+async function translateText(env, text, targetLang) {
+  if (!text || !env.AI || targetLang === 'fa') return text || '';
+  try {
+    const result = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+      messages: [
+        {
+          role: 'system',
+          content: `Translate the user's message into language code ${targetLang}. Return ONLY the translation, with no commentary, labels, quotation marks, or extra text. Preserve names, numbers, URLs, file names, and HTML tags exactly.`
+        },
+        { role: 'user', content: text }
+      ]
+    });
+    return String(result?.response || text).trim();
+  } catch {
+    return text;
+  }
+}
+
 async function relayCustomerMessage(env, msg, lang) {
   if (!env.LEADS_KV || !msg?.chat?.id) return false;
   const chatId = msg.chat.id;
@@ -464,7 +482,8 @@ async function relayCustomerMessage(env, msg, lang) {
   const raw = await env.LEADS_KV.get(latestKey);
   if (!raw) return false;
   const lead = JSON.parse(raw);
-  if (['done', 'closed', 'completed'].includes(lead.status)) return false;
+  if (['done', 'closed', 'completed'].includes(String(lead.status || '').trim().toLowerCase())) return false;
+  const customerLang = normalizeLanguage((await getLanguage(env, chatId)) || lead.language || lang);
   const text = (msg.text || msg.caption || '').trim();
   let fileId = null;
   let mediaType = null;
@@ -474,7 +493,8 @@ async function relayCustomerMessage(env, msg, lang) {
   else if (msg.audio) { fileId = msg.audio.file_id; mediaType = 'audio'; }
   else if (msg.voice) { fileId = msg.voice.file_id; mediaType = 'voice'; }
   else if (msg.animation) { fileId = msg.animation.file_id; mediaType = 'animation'; }
-  await send(env, adminChatId(env), `💬 <b>پیام جدید از مشتری</b>\n\n👤 ${lead.name || '-'}\n🆔 <code>${chatId}</code>\n🌐 ${lang}\n\n${text || '(فایل/رسانه ارسال شد)'}`, { reply_markup: adminLeadKeyboard(lead) });
+  const persianText = text ? await translateText(env, text, 'fa') : '(فایل/رسانه ارسال شد)';
+  await send(env, adminChatId(env), `💬 <b>پیام جدید از مشتری</b>\n\n👤 ${lead.name || '-'}\n🆔 <code>${chatId}</code>\n🌐 زبان مشتری: ${customerLang}\n\n${persianText}`, { reply_markup: adminLeadKeyboard(lead) });
   if (fileId && mediaType) await forwardLeadMedia(env, { file_id: fileId, media_type: mediaType });
   return true;
 }
@@ -492,7 +512,11 @@ async function processUpdate(env, update) {
     if (env.LEADS_KV && text && !text.startsWith('/')) {
       const replyTarget = await env.LEADS_KV.get(`admin:reply:${adminChatId(env)}`);
       if (replyTarget) {
-        await send(env, replyTarget, text);
+        const latestKey = await env.LEADS_KV.get(`latest:${replyTarget}`);
+        const latestRaw = latestKey ? await env.LEADS_KV.get(latestKey) : null;
+        const targetLead = latestRaw ? JSON.parse(latestRaw) : {};
+        const targetLang = normalizeLanguage((await getLanguage(env, replyTarget)) || targetLead.language || 'fa');
+        await send(env, replyTarget, await translateText(env, text, targetLang));
         await env.LEADS_KV.delete(`admin:reply:${adminChatId(env)}`);
         await updateLeadStatus(env, replyTarget, 'contacted');
         await send(env, adminChatId(env), `✅ پاسخ برای مشتری <code>${replyTarget}</code> ارسال شد و وضعیت به «تماس شد» تغییر کرد.`);
@@ -505,7 +529,11 @@ async function processUpdate(env, update) {
       const targetId = parts[1];
       const replyText = parts.slice(2).join(' ').trim();
       if (targetId && replyText) {
-        await send(env, targetId, replyText);
+        const latestKey = await env.LEADS_KV.get(`latest:${targetId}`);
+        const latestRaw = latestKey ? await env.LEADS_KV.get(latestKey) : null;
+        const targetLead = latestRaw ? JSON.parse(latestRaw) : {};
+        const targetLang = normalizeLanguage((await getLanguage(env, targetId)) || targetLead.language || 'fa');
+        await send(env, targetId, await translateText(env, replyText, targetLang));
         await send(env, adminChatId(env), `✅ پیام برای <code>${targetId}</code> ارسال شد.`);
       }
       return;
