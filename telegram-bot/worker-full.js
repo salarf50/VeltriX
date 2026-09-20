@@ -164,6 +164,17 @@ function backMenu(lang) {
   return { inline_keyboard: [[{ text: labels[lang] || labels.en, callback_data: 'back:menu' }]] };
 }
 
+function leadControls(lang, canGoBack = false) {
+  const labels = {
+    fa: { back: '⬅️ مرحله قبل', erase: '🗑 حذف حافظه' },
+    en: { back: '⬅️ Previous step', erase: '🗑 Delete memory' },
+    tr: { back: '⬅️ Önceki adım', erase: '🗑 Hafızayı sil' },
+    ar: { back: '⬅️ الخطوة السابقة', erase: '🗑 حذف الذاكرة' },
+    az: { back: '⬅️ Əvvəlki mərhələ', erase: '🗑 Yaddaşı sil' }
+  }[lang] || { back: '⬅️ Previous step', erase: '🗑 Delete memory' };
+  return { inline_keyboard: [[...(canGoBack ? [{ text: labels.back, callback_data: 'lead:back' }] : []), { text: labels.erase, callback_data: 'memory:delete' }]] };
+}
+
 function adminLeadKeyboard(lead) {
   const id = String(lead.chat_id);
   return {
@@ -216,6 +227,20 @@ async function setState(env, chatId, state) {
 async function clearState(env, chatId) {
   if (!env.LEADS_KV) return;
   await env.LEADS_KV.delete(`state:${chatId}`);
+}
+
+async function deleteCustomerMemory(env, chatId) {
+  if (!env.LEADS_KV) return;
+  const listed = await env.LEADS_KV.list({ prefix: 'lead:', limit: 1000 });
+  for (const key of listed.keys || []) {
+    if (key.name.endsWith(`:${chatId}`)) await env.LEADS_KV.delete(key.name);
+  }
+  await Promise.all([
+    env.LEADS_KV.delete(`latest:${chatId}`),
+    env.LEADS_KV.delete(`state:${chatId}`),
+    env.LEADS_KV.delete(`language:${chatId}`),
+    env.LEADS_KV.delete(`latest_survey:${chatId}`)
+  ]);
 }
 
 async function getLanguage(env, chatId) {
@@ -614,9 +639,25 @@ async function processUpdate(env, update) {
 
     const lang = (await getLanguage(env, chatId)) || normalizeLanguage(q.from?.language_code || 'en');
 
+    if (q.data === 'memory:delete') {
+      await deleteCustomerMemory(env, chatId);
+      return send(env, chatId, '✅ حافظه و لیدهای شما پاک شد. برای شروع دوباره /start را بزنید.', { reply_markup: languageMenu() });
+    }
+
+    if (q.data === 'lead:back') {
+      const state = await getState(env, chatId);
+      const previous = { country: 'company', part: 'country', volume: 'part', file: 'volume' }[state?.step];
+      if (!state || !previous) return send(env, chatId, t(lang).lead_start + '\n\n' + t(lang).ask_company, { reply_markup: leadControls(lang) });
+      delete state.data?.[state.step];
+      state.step = previous;
+      await setState(env, chatId, state);
+      const question = { company: t(lang).ask_company, country: t(lang).ask_country, part: t(lang).ask_part, volume: t(lang).ask_volume }[previous];
+      return send(env, chatId, `✏️ ${question}`, { reply_markup: leadControls(lang, previous !== 'company') });
+    }
+
     if (q.data === 'lead') {
       await setState(env, chatId, { step: 'company', data: {}, language: lang });
-      return send(env, chatId, t(lang).lead_start + '\n\n' + t(lang).ask_company);
+      return send(env, chatId, t(lang).lead_start + '\n\n' + t(lang).ask_company, { reply_markup: leadControls(lang) });
     }
 
     if (q.data === 'back:menu') {
@@ -712,25 +753,25 @@ async function processUpdate(env, update) {
       state.data.company = text;
       state.step = 'country';
       await setState(env, chatId, state);
-      return send(env, chatId, t(lang).ask_country);
+      return send(env, chatId, t(lang).ask_country, { reply_markup: leadControls(lang, true) });
     }
     if (state.step === 'country') {
       state.data.country = text;
       state.step = 'part';
       await setState(env, chatId, state);
-      return send(env, chatId, t(lang).ask_part);
+      return send(env, chatId, t(lang).ask_part, { reply_markup: leadControls(lang, true) });
     }
     if (state.step === 'part') {
       state.data.part = text;
       state.step = 'volume';
       await setState(env, chatId, state);
-      return send(env, chatId, t(lang).ask_volume);
+      return send(env, chatId, t(lang).ask_volume, { reply_markup: leadControls(lang, true) });
     }
     if (state.step === 'volume') {
       state.data.volume = text;
       state.step = 'file';
       await setState(env, chatId, state);
-      return send(env, chatId, t(lang).ask_file);
+      return send(env, chatId, t(lang).ask_file, { reply_markup: leadControls(lang, true) });
     }
     if (state.step === 'file') {
       const fullText = `شرکت: ${state.data.company}\nکشور: ${state.data.country}\nقطعه: ${state.data.part}\nتیراژ: ${state.data.volume}\nتوضیح اضافی: ${text || '-'}`;
