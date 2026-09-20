@@ -450,6 +450,29 @@ STRICT RULES:
   }
 }
 
+async function relayCustomerMessage(env, msg, lang) {
+  if (!env.LEADS_KV || !msg?.chat?.id) return false;
+  const chatId = msg.chat.id;
+  const latestKey = await env.LEADS_KV.get(`latest:${chatId}`);
+  if (!latestKey) return false;
+  const raw = await env.LEADS_KV.get(latestKey);
+  if (!raw) return false;
+  const lead = JSON.parse(raw);
+  if (['done', 'closed', 'completed'].includes(lead.status)) return false;
+  const text = (msg.text || msg.caption || '').trim();
+  let fileId = null;
+  let mediaType = null;
+  if (msg.photo) { fileId = msg.photo[msg.photo.length - 1].file_id; mediaType = 'photo'; }
+  else if (msg.document) { fileId = msg.document.file_id; mediaType = 'document'; }
+  else if (msg.video) { fileId = msg.video.file_id; mediaType = 'video'; }
+  else if (msg.audio) { fileId = msg.audio.file_id; mediaType = 'audio'; }
+  else if (msg.voice) { fileId = msg.voice.file_id; mediaType = 'voice'; }
+  else if (msg.animation) { fileId = msg.animation.file_id; mediaType = 'animation'; }
+  await send(env, adminChatId(env), `💬 <b>پیام جدید از مشتری</b>\n\n👤 ${lead.name || '-'}\n🆔 <code>${chatId}</code>\n🌐 ${lang}\n\n${text || '(فایل/رسانه ارسال شد)'}`, { reply_markup: adminLeadKeyboard(lead) });
+  if (fileId && mediaType) await forwardLeadMedia(env, { file_id: fileId, media_type: mediaType });
+  return true;
+}
+
 async function processUpdate(env, update) {
   if (update.message?.text === '/id') {
     await send(env, update.message.chat.id, `شناسهٔ این گفت‌وگو: <code>${update.message.chat.id}</code>`);
@@ -701,6 +724,10 @@ async function processUpdate(env, update) {
       await clearState(env, chatId);
       return send(env, chatId, t(lang).thanks_lead);
     }
+  }
+
+  if (await relayCustomerMessage(env, msg, lang)) {
+    return send(env, chatId, t(lang).media_thanks || 'پیامتان برای تیم فنی ارسال شد ✅');
   }
 
   if (hasMedia) {

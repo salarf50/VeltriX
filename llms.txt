@@ -1,6 +1,6 @@
 # VeltriX
 
-VeltriX designs and manufactures precision plastic injection molds and engineering mold solutions.
+VeltriX designs and manufactures precision plastic injection molds and engineering mold solutions for manufacturers in Iran and export markets.
 
 ## Services
 - Plastic injection molds
@@ -10,11 +10,18 @@ VeltriX designs and manufactures precision plastic injection molds and engineeri
 - Thermoforming and die casting
 - Initial project review from drawings or 3D files
 
+## Languages
+Persian, English, Turkish, Arabic, and Azerbaijani.
+
 ## Official website
 https://veltrixmold-auto.pages.dev/
 
 ## Instagram
 https://www.instagram.com/veltrix_mold/
+
+## Lead-generation bots
+Telegram: https://t.me/veltrixmold_bot
+Baleh: https://ble.ir/veltrixmold_bot
 
 ## Contact
 https://wa.me/989141026956
