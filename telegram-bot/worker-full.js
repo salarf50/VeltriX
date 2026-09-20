@@ -275,6 +275,33 @@ function isCompletedLead(lead) {
   return ['done', 'closed', 'completed'].includes(String(lead?.status || '').trim().toLowerCase());
 }
 
+async function latestLeads(env) {
+  if (!env.LEADS_KV) return [];
+  const listed = await env.LEADS_KV.list({ prefix: 'latest:', limit: 1000 });
+  const leads = [];
+  for (const key of listed.keys || []) {
+    const leadKey = await env.LEADS_KV.get(key.name);
+    if (!leadKey) continue;
+    const raw = await env.LEADS_KV.get(leadKey);
+    if (!raw) continue;
+    try { leads.push(JSON.parse(raw)); } catch {}
+  }
+  return leads;
+}
+
+async function sendAdminReport(env, adminId) {
+  const leads = await latestLeads(env);
+  const open = leads.filter(lead => !isCompletedLead(lead));
+  const done = leads.length - open.length;
+  const byChannel = leads.reduce((out, lead) => { const key = lead.channel || 'unknown'; out[key] = (out[key] || 0) + 1; return out; }, {});
+  const byLanguage = leads.reduce((out, lead) => { const key = lead.language || 'unknown'; out[key] = (out[key] || 0) + 1; return out; }, {});
+  const line = (obj) => Object.entries(obj).map(([key, value]) => `${key}: ${value}`).join(' | ') || '-';
+  await send(env, adminId, `📊 <b>گزارش مرکزی VeltriX</b>\n\nکل پرونده‌های آخرین وضعیت: <b>${leads.length}</b>\nباز و نیازمند پیگیری: <b>${open.length}</b>\nاتمام‌یافته: <b>${done}</b>\n\n🌐 زبان‌ها: ${line(byLanguage)}\n📥 کانال‌ها: ${line(byChannel)}\n\n${open.length ? 'پرونده‌های باز در پیام‌های بعدی ارسال می‌شوند.' : 'در حال حاضر پروندهٔ بازی وجود ندارد.'}`);
+  for (const lead of open.sort((a, b) => String(a.date || '').localeCompare(String(b.date || ''))).slice(0, 40)) {
+    await send(env, adminId, `👤 <b>${lead.name || 'بدون نام'}</b>\n🏢 ${lead.collected?.company || '-'}\n📌 ${lead.status || 'new'}\n🌐 ${lead.language || '-'}\n📥 ${lead.channel || '-'}\n🆔 <code>${lead.chat_id}</code>`, { reply_markup: adminLeadKeyboard(lead) });
+  }
+}
+
 async function sendDailyReminder(env) {
   if (!env.LEADS_KV) return;
   const listed = await env.LEADS_KV.list({ prefix: 'latest:', limit: 1000 });
@@ -529,6 +556,11 @@ async function processUpdate(env, update) {
   // دستورات ادمین
   if (update.message && String(update.message.chat.id) === String(ADMIN_CHAT_ID)) {
     const text = update.message.text || '';
+
+    if (text === '/report' || text === '/گزارش') {
+      await sendAdminReport(env, ADMIN_CHAT_ID);
+      return;
+    }
 
     if (env.LEADS_KV && text && !text.startsWith('/')) {
       const replyTarget = await env.LEADS_KV.get(`admin:reply:${ADMIN_CHAT_ID}`);
