@@ -242,16 +242,22 @@ async function updateLeadStatus(env, chatId, status) {
   return lead;
 }
 
+function isCompletedLead(lead) {
+  return ['done', 'closed', 'completed'].includes(String(lead?.status || '').trim().toLowerCase());
+}
+
 async function sendDailyReminder(env) {
   if (!env.LEADS_KV) return;
-  const listed = await env.LEADS_KV.list({ prefix: 'lead:', limit: 1000 });
+  const listed = await env.LEADS_KV.list({ prefix: 'latest:', limit: 1000 });
   const leads = [];
   for (const key of listed.keys || []) {
-    const raw = await env.LEADS_KV.get(key.name);
+    const leadKey = await env.LEADS_KV.get(key.name);
+    if (!leadKey) continue;
+    const raw = await env.LEADS_KV.get(leadKey);
     if (!raw) continue;
     try {
       const lead = JSON.parse(raw);
-      if (!['done', 'closed', 'completed'].includes(lead.status)) leads.push(lead);
+      if (!isCompletedLead(lead)) leads.push(lead);
     } catch {}
   }
 
