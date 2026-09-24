@@ -30,13 +30,19 @@ const TEXT = {
     media_thanks: 'فایل/عکس رو دریافت کردم، ممنون. دارم براتون ثبت می‌کنم.',
     unknown: 'در خدمتم. اگر در مورد قالب تزریق پلاستیک، هات‌رانر، قالب پزشکی یا خودرویی سوالی دارید بفرمایید.',
     services: [
-      ['قالب تزریق پلاستیک', 'injection'],
-      ['Hot Runner / Valve Gate', 'hotrunner'],
-      ['قالب پزشکی و بسته‌بندی', 'medical'],
-      ['قالب خودرویی و لوازم خانگی', 'auto'],
-      ['ترموفرمینگ و دایکاست', 'thermo']
+      ['نیاز به خدمات پرینت سه‌بعدی دارم', 'print3d'],
+      ['نیاز به مشاوره دارم', 'consultation']
     ],
-    project_review: 'شروع بررسی پروژه'
+    project_review: 'شروع بررسی پروژه',
+    print3d_start: 'برای ثبت درخواست خدمات پرینت سه‌بعدی، نام و شماره تماس شما را می‌گیرم و بعد از دریافت عکس یا فایل قطعه، اطلاعات را برای ادمین می‌فرستم.',
+    consult_start: 'برای اینکه مشاوره مناسب‌تری دریافت کنید، نام، شماره تماس و موضوع مشاوره را می‌گیرم و برای ادمین ارسال می‌کنم.',
+    ask_name: 'نام و نام خانوادگی‌تان را بفرستید.',
+    ask_phone: 'شماره تماس‌تان را بفرستید.',
+    ask_consult_topic: 'مشاوره را دربارهٔ چه زمینه‌ای می‌خواهید؟',
+    ask_print3d_file: 'حالا لطفاً عکس یا فایل قطعه را بفرستید. اگر توضیحی دارید، همراه فایل بنویسید.',
+    invalid_phone: 'لطفاً یک شماره تماس معتبر بفرستید (حداقل ۷ رقم).',
+    print3d_thanks: 'ممنون ✅ اطلاعات شما و فایل/عکس قطعه برای ادمین ارسال شد. به‌زودی با شما تماس می‌گیریم.',
+    consult_thanks: 'ممنون ✅ درخواست مشاورهٔ شما برای ادمین ارسال شد. به‌زودی با شما تماس می‌گیریم.'
   },
   en: {
     welcome: 'Hello, good time 🌿\nI’m from the VeltriX technical team. Glad you reached out.\nHow can I help you?',
@@ -51,13 +57,19 @@ const TEXT = {
     media_thanks: 'I’ve received your file/photo, thank you. Registering it now.',
     unknown: 'I’m here to help. If you have questions about plastic injection molds, hot runner, medical or automotive molds, just tell me.',
     services: [
-      ['Plastic Injection Molds', 'injection'],
-      ['Hot Runner / Valve Gate', 'hotrunner'],
-      ['Medical & Packaging Molds', 'medical'],
-      ['Automotive & Appliance Molds', 'auto'],
-      ['Thermoforming & Die Casting', 'thermo']
+      ['I need 3D printing services', 'print3d'],
+      ['I need a consultation', 'consultation']
     ],
-    project_review: 'Start Project Review'
+    project_review: 'Start Project Review',
+    print3d_start: 'To register your 3D printing request, I will collect your name and phone number, then send your part photo or file to the administrator.',
+    consult_start: 'To arrange a useful consultation, I will collect your name, phone number, and consultation topic for the administrator.',
+    ask_name: 'Please send your full name.',
+    ask_phone: 'Please send your phone number.',
+    ask_consult_topic: 'What would you like to discuss?',
+    ask_print3d_file: 'Now please send a photo or file of the part. Add any useful notes with it.',
+    invalid_phone: 'Please send a valid phone number with at least 7 digits.',
+    print3d_thanks: 'Thank you ✅ Your details and part photo/file were sent to the administrator. We will contact you soon.',
+    consult_thanks: 'Thank you ✅ Your consultation request was sent to the administrator. We will contact you soon.'
   },
   tr: {
     welcome: 'Merhaba, iyi günler 🌿\nVeltriX teknik ekibinden yazıyorum. Mesajınız için teşekkürler.\nSize nasıl yardımcı olabilirim?',
@@ -72,13 +84,19 @@ const TEXT = {
     media_thanks: 'Dosyanızı/fotoğrafınızı aldım, teşekkürler. Kaydediyorum.',
     unknown: 'Size yardımcı olmak için buradayım. Plastik enjeksiyon, hot runner, medikal veya otomotiv kalıpları hakkında sorularınızı sorabilirsiniz.',
     services: [
-      ['Plastik Enjeksiyon Kalıpları', 'injection'],
-      ['Hot Runner / Valve Gate', 'hotrunner'],
-      ['Medikal ve Ambalaj Kalıpları', 'medical'],
-      ['Otomotiv ve Beyaz Eşya Kalıpları', 'auto'],
-      ['Termoform ve Basınçlı Döküm', 'thermo']
+      ['3D baskı hizmetine ihtiyacım var', 'print3d'],
+      ['Danışmanlığa ihtiyacım var', 'consultation']
     ],
-    project_review: 'Proje İncelemesine Başla'
+    project_review: 'Proje İncelemesine Başla',
+    print3d_start: '3D baskı talebinizi kaydetmek için adınızı ve telefonunuzu alacağım; ardından parça fotoğrafını veya dosyasını yöneticiye ileteceğim.',
+    consult_start: 'Uygun bir danışmanlık için adınızı, telefonunuzu ve danışmanlık konusunu yöneticiye iletmek üzere alacağım.',
+    ask_name: 'Lütfen adınızı ve soyadınızı gönderin.',
+    ask_phone: 'Lütfen telefon numaranızı gönderin.',
+    ask_consult_topic: 'Hangi konuda danışmanlık istiyorsunuz?',
+    ask_print3d_file: 'Şimdi lütfen parçanın fotoğrafını veya dosyasını gönderin. Varsa açıklamanızı da ekleyin.',
+    invalid_phone: 'Lütfen en az 7 haneli geçerli bir telefon numarası gönderin.',
+    print3d_thanks: 'Teşekkürler ✅ Bilgileriniz ve parça dosyanız/fotoğrafınız yöneticiye iletildi. Yakında sizinle iletişime geçeceğiz.',
+    consult_thanks: 'Teşekkürler ✅ Danışmanlık talebiniz yöneticiye iletildi. Yakında sizinle iletişime geçeceğiz.'
   },
   ar: {
     welcome: 'مرحباً، طاب يومكم 🌿\nأنا من الفريق الفني في VeltriX. سعيد بتواصلكم.\nكيف يمكنني مساعدتكم؟',
@@ -93,13 +111,19 @@ const TEXT = {
     media_thanks: 'استلمت الملف/الصورة، شكراً. أقوم بتسجيله الآن.',
     unknown: 'أنا هنا لمساعدتكم. يمكنكم سؤالي عن قوالب حقن البلاستيك أو الهوت رانر أو القوالب الطبية والسيارات.',
     services: [
-      ['قوالب حقن البلاستيك', 'injection'],
-      ['Hot Runner / Valve Gate', 'hotrunner'],
-      ['القوالب الطبية والتغليف', 'medical'],
-      ['قوالب السيارات والأجهزة', 'auto'],
-      ['التشكيل الحراري والدايكاست', 'thermo']
+      ['أحتاج إلى خدمات الطباعة ثلاثية الأبعاد', 'print3d'],
+      ['أحتاج إلى استشارة', 'consultation']
     ],
-    project_review: 'بدء مراجعة المشروع'
+    project_review: 'بدء مراجعة المشروع',
+    print3d_start: 'لتسجيل طلب الطباعة ثلاثية الأبعاد، سأجمع اسمكم ورقم هاتفكم ثم أرسل صورة القطعة أو ملفها إلى المسؤول.',
+    consult_start: 'لتنظيم استشارة مناسبة، سأجمع اسمكم ورقم هاتفكم وموضوع الاستشارة وأرسله إلى المسؤول.',
+    ask_name: 'يرجى إرسال الاسم الكامل.',
+    ask_phone: 'يرجى إرسال رقم الهاتف.',
+    ask_consult_topic: 'في أي موضوع ترغبون في الاستشارة؟',
+    ask_print3d_file: 'الآن يرجى إرسال صورة القطعة أو ملفها، ويمكنكم إضافة ملاحظاتكم معها.',
+    invalid_phone: 'يرجى إرسال رقم هاتف صالح مكوّن من 7 أرقام على الأقل.',
+    print3d_thanks: 'شكراً ✅ تم إرسال معلوماتكم وصورة/ملف القطعة إلى المسؤول. سنتواصل معكم قريباً.',
+    consult_thanks: 'شكراً ✅ تم إرسال طلب الاستشارة إلى المسؤول. سنتواصل معكم قريباً.'
   },
   az: {
     welcome: 'Salam, yaxşı günlər 🌿\nVeltriX texniki komandasından yazıram. Mesajınız üçün təşəkkürlər.\nSizə necə kömək edə bilərəm?',
@@ -114,13 +138,19 @@ const TEXT = {
     media_thanks: 'Faylınızı/şəklinizi aldım, təşəkkürlər. Qeyd edirəm.',
     unknown: 'Sizə kömək etmək üçün buradayam. Plastik inyeksiya, hot runner, tibbi və ya avtomobil qəlibləri haqqında suallarınızı verə bilərsiniz.',
     services: [
-      ['Plastik inyeksiya qəlibləri', 'injection'],
-      ['Hot Runner / Valve Gate', 'hotrunner'],
-      ['Tibbi və qablaşdırma qəlibləri', 'medical'],
-      ['Avtomobil və məişət texnikası qəlibləri', 'auto'],
-      ['Termoform və tökmə qəlibləri', 'thermo']
+      ['3D çap xidmətinə ehtiyacım var', 'print3d'],
+      ['Məsləhətləşməyə ehtiyacım var', 'consultation']
     ],
-    project_review: 'Layihə baxışına başla'
+    project_review: 'Layihə baxışına başla',
+    print3d_start: '3D çap sorğunuzu qeyd etmək üçün adınızı və telefonunuzu alacağam, sonra detalın şəklini və ya faylını administratora göndərəcəyəm.',
+    consult_start: 'Uyğun məsləhət üçün adınızı, telefonunuzu və məsləhət mövzusunu administratora göndərmək üçün alacağam.',
+    ask_name: 'Zəhmət olmasa adınızı və soyadınızı göndərin.',
+    ask_phone: 'Zəhmət olmasa telefon nömrənizi göndərin.',
+    ask_consult_topic: 'Hansı mövzuda məsləhət istəyirsiniz?',
+    ask_print3d_file: 'İndi zəhmət olmasa detalın şəklini və ya faylını göndərin. Varsa izahınızı da əlavə edin.',
+    invalid_phone: 'Zəhmət olmasa ən azı 7 rəqəmli düzgün telefon nömrəsi göndərin.',
+    print3d_thanks: 'Təşəkkürlər ✅ Məlumatlarınız və detal faylınız/şəkliniz administratora göndərildi. Tezliklə sizinlə əlaqə saxlayacağıq.',
+    consult_thanks: 'Təşəkkürlər ✅ Məsləhət sorğunuz administratora göndərildi. Tezliklə sizinlə əlaqə saxlayacağıq.'
   }
 };
 
@@ -140,6 +170,10 @@ function normalizeLanguage(v = '') {
 
 function t(lang) {
   return TEXT[LANGS.includes(lang) ? lang : 'en'];
+}
+
+function validPhone(value = '') {
+  return String(value).replace(/\D/g, '').length >= 7;
 }
 
 function menu(lang) {
@@ -704,6 +738,14 @@ async function processUpdate(env, update) {
 
     if (!q.data.startsWith('service:')) return;
     const serviceId = q.data.slice('service:'.length);
+    if (serviceId === 'print3d') {
+      await setState(env, chatId, { flow: 'print3d', step: 'print3d_name', data: {}, language: lang });
+      return send(env, chatId, t(lang).print3d_start + '\n\n' + t(lang).ask_name, { reply_markup: leadControls(lang) });
+    }
+    if (serviceId === 'consultation') {
+      await setState(env, chatId, { flow: 'consultation', step: 'consult_name', data: {}, language: lang });
+      return send(env, chatId, t(lang).consult_start + '\n\n' + t(lang).ask_name, { reply_markup: leadControls(lang) });
+    }
     const service = t(lang).services.find(x => x[1] === serviceId);
     if (service) {
       const prompts = {
@@ -787,6 +829,53 @@ async function processUpdate(env, update) {
       await clearState(env, chatId);
       return send(env, chatId, 'ممنون از بازخورد شما؛ نظر شما برای بهبود خدمات VeltriX ثبت شد.');
     }
+    if (state.flow === 'print3d') {
+      if (state.step === 'print3d_name') {
+        state.data.name = text;
+        state.step = 'print3d_phone';
+        await setState(env, chatId, state);
+        return send(env, chatId, t(lang).ask_phone, { reply_markup: leadControls(lang) });
+      }
+      if (state.step === 'print3d_phone') {
+        const phone = msg.contact?.phone_number || text;
+        if (!validPhone(phone)) return send(env, chatId, t(lang).invalid_phone, { reply_markup: leadControls(lang) });
+        state.data.phone = phone;
+        state.step = 'print3d_file';
+        await setState(env, chatId, state);
+        return send(env, chatId, t(lang).ask_print3d_file, { reply_markup: leadControls(lang) });
+      }
+      if (state.step === 'print3d_file') {
+        if (!hasMedia) return send(env, chatId, t(lang).ask_print3d_file, { reply_markup: leadControls(lang) });
+        const fullText = 'درخواست پرینت سه‌بعدی\nنام: ' + state.data.name + '\nشماره تماس: ' + state.data.phone + '\nتوضیح فایل/قطعه: ' + (text || '-');
+        await saveLead(env, { chat_id: chatId, username: from.username || '', name: state.data.name, language: lang, text: fullText, has_media: true, file_id: fileId, media_type: mediaType, date: new Date().toISOString(), channel: 'baleh', collected: { ...state.data, request_type: '3d_printing', file_caption: text || '' } });
+        await clearState(env, chatId);
+        return send(env, chatId, t(lang).print3d_thanks);
+      }
+    }
+
+    if (state.flow === 'consultation') {
+      if (state.step === 'consult_name') {
+        state.data.name = text;
+        state.step = 'consult_phone';
+        await setState(env, chatId, state);
+        return send(env, chatId, t(lang).ask_phone, { reply_markup: leadControls(lang) });
+      }
+      if (state.step === 'consult_phone') {
+        const phone = msg.contact?.phone_number || text;
+        if (!validPhone(phone)) return send(env, chatId, t(lang).invalid_phone, { reply_markup: leadControls(lang) });
+        state.data.phone = phone;
+        state.step = 'consult_topic';
+        await setState(env, chatId, state);
+        return send(env, chatId, t(lang).ask_consult_topic, { reply_markup: leadControls(lang) });
+      }
+      if (state.step === 'consult_topic') {
+        state.data.topic = text;
+        const fullText = 'درخواست مشاوره\nنام: ' + state.data.name + '\nشماره تماس: ' + state.data.phone + '\nزمینه مشاوره: ' + state.data.topic;
+        await saveLead(env, { chat_id: chatId, username: from.username || '', name: state.data.name, language: lang, text: fullText, has_media: false, file_id: null, date: new Date().toISOString(), channel: 'baleh', collected: { ...state.data, request_type: 'consultation' } });
+        await clearState(env, chatId);
+        return send(env, chatId, t(lang).consult_thanks);
+      }
+    }
     if (state.step === 'company') {
       state.data.company = text;
       state.step = 'country';
@@ -823,7 +912,7 @@ async function processUpdate(env, update) {
         file_id: fileId,
         media_type: mediaType,
         date: new Date().toISOString(),
-        channel: 'telegram',
+        channel: 'baleh',
         collected: state.data
       });
       await clearState(env, chatId);
@@ -846,7 +935,7 @@ async function processUpdate(env, update) {
       file_id: fileId,
       media_type: mediaType,
       date: new Date().toISOString(),
-      channel: 'telegram'
+      channel: 'baleh'
     });
     return send(env, chatId, t(lang).media_thanks + '\n\n' + t(lang).thanks_lead);
   }
@@ -863,7 +952,7 @@ async function processUpdate(env, update) {
         has_media: false,
         file_id: null,
         date: new Date().toISOString(),
-        channel: 'telegram'
+        channel: 'baleh'
       });
     }
     return send(env, chatId, ai, { reply_markup: menu(lang) });
