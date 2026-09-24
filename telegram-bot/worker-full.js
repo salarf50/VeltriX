@@ -173,6 +173,22 @@ function validPhone(value = '') {
   return String(value).replace(/\D/g, '').length >= 7;
 }
 
+function journeyPrompt(lang, step, total, question) {
+  const labels = {
+    fa: 'مرحله', en: 'Step', tr: 'Adım', ar: 'المرحلة', az: 'Mərhələ'
+  };
+  const encouragement = {
+    fa: 'عالی پیش می‌روید؛ هر پاسخ، یک قدم واقعی برای تبدیل ایده به نتیجه است.',
+    en: 'You are making real progress; every answer turns your idea into a clear next step.',
+    tr: 'Harika ilerliyorsunuz; her cevap fikrinizi gerçek bir sonraki adıma dönüştürüyor.',
+    ar: 'أنتم تتقدمون بشكل رائع؛ كل إجابة تحوّل فكرتكم إلى خطوة واضحة.',
+    az: 'Əla irəliləyirsiniz; hər cavab ideyanızı real növbəti addıma çevirir.'
+  };
+  const label = labels[lang] || labels.en;
+  const note = encouragement[lang] || encouragement.en;
+  return '✨ ' + label + ' ' + step + '/' + total + '\n' + note + '\n\n' + question;
+}
+
 function menu(lang) {
   const texts = t(lang);
   return {
@@ -711,7 +727,7 @@ async function processUpdate(env, update) {
     if (q.data === 'lead:back') {
       const state = await getState(env, chatId);
       const previous = { country: 'company', part: 'country', volume: 'part', file: 'volume' }[state?.step];
-      if (!state || !previous) return send(env, chatId, t(lang).lead_start + '\n\n' + t(lang).ask_company, { reply_markup: leadControls(lang) });
+      if (!state || !previous) return send(env, chatId, journeyPrompt(lang, 1, 5, t(lang).lead_start + '\n\n' + t(lang).ask_company), { reply_markup: leadControls(lang) });
       delete state.data?.[state.step];
       state.step = previous;
       await setState(env, chatId, state);
@@ -721,7 +737,7 @@ async function processUpdate(env, update) {
 
     if (q.data === 'lead') {
       await setState(env, chatId, { step: 'company', data: {}, language: lang });
-      return send(env, chatId, t(lang).lead_start + '\n\n' + t(lang).ask_company, { reply_markup: leadControls(lang) });
+      return send(env, chatId, journeyPrompt(lang, 1, 5, t(lang).lead_start + '\n\n' + t(lang).ask_company), { reply_markup: leadControls(lang) });
     }
 
     if (q.data === 'back:menu') {
@@ -732,11 +748,11 @@ async function processUpdate(env, update) {
     const serviceId = q.data.slice('service:'.length);
     if (serviceId === 'print3d') {
       await setState(env, chatId, { flow: 'print3d', step: 'print3d_name', data: {}, language: lang });
-      return send(env, chatId, t(lang).print3d_start + '\n\n' + t(lang).ask_name, { reply_markup: leadControls(lang) });
+      return send(env, chatId, journeyPrompt(lang, 1, 3, t(lang).print3d_start + '\n\n' + t(lang).ask_name), { reply_markup: leadControls(lang) });
     }
     if (serviceId === 'consultation') {
       await setState(env, chatId, { flow: 'consultation', step: 'consult_name', data: {}, language: lang });
-      return send(env, chatId, t(lang).consult_start + '\n\n' + t(lang).ask_name, { reply_markup: leadControls(lang) });
+      return send(env, chatId, journeyPrompt(lang, 1, 3, t(lang).consult_start + '\n\n' + t(lang).ask_name), { reply_markup: leadControls(lang) });
     }
     const service = t(lang).services.find(x => x[1] === serviceId);
     if (service) {
@@ -795,10 +811,7 @@ async function processUpdate(env, update) {
 
   if (text.startsWith('/start') || text.startsWith('/menu')) {
     await clearState(env, chatId);
-    if (!savedLanguage) {
-      return send(env, chatId, 'لطفاً زبان خود را انتخاب کنید / Please choose your language / Lütfen dilinizi seçin / يرجى اختيار اللغة', { reply_markup: languageMenu() });
-    }
-    return send(env, chatId, t(lang).welcome, { reply_markup: menu(lang) });
+    return send(env, chatId, '🌿 به VeltriX خوش آمدید\nWelcome to VeltriX\nVeltriX\'e hoş geldiniz\nمرحباً بكم في VeltriX\nVeltriX-ə xoş gəlmisiniz\n\n✨ شما آماده‌اید یک قدم واقعی برای تبدیل ایده‌تان به نتیجه بردارید. زبان خود را انتخاب کنید تا مسیر را با هم شروع کنیم.', { reply_markup: languageMenu() });
   }
 
   const hasMedia = !!(msg.photo || msg.document || msg.video || msg.audio || msg.voice || msg.animation);
@@ -826,7 +839,7 @@ async function processUpdate(env, update) {
         state.data.name = text;
         state.step = 'print3d_phone';
         await setState(env, chatId, state);
-        return send(env, chatId, t(lang).ask_phone, { reply_markup: leadControls(lang) });
+        return send(env, chatId, journeyPrompt(lang, 2, 3, t(lang).ask_phone), { reply_markup: leadControls(lang) });
       }
       if (state.step === 'print3d_phone') {
         const phone = msg.contact?.phone_number || text;
@@ -834,14 +847,14 @@ async function processUpdate(env, update) {
         state.data.phone = phone;
         state.step = 'print3d_file';
         await setState(env, chatId, state);
-        return send(env, chatId, t(lang).ask_print3d_file, { reply_markup: leadControls(lang) });
+        return send(env, chatId, journeyPrompt(lang, 3, 3, t(lang).ask_print3d_file), { reply_markup: leadControls(lang) });
       }
       if (state.step === 'print3d_file') {
-        if (!hasMedia) return send(env, chatId, t(lang).ask_print3d_file, { reply_markup: leadControls(lang) });
+        if (!hasMedia) return send(env, chatId, journeyPrompt(lang, 3, 3, t(lang).ask_print3d_file), { reply_markup: leadControls(lang) });
         const fullText = 'درخواست پرینت سه‌بعدی\nنام: ' + state.data.name + '\nشماره تماس: ' + state.data.phone + '\nتوضیح فایل/قطعه: ' + (text || '-');
         await saveLead(env, { chat_id: chatId, username: from.username || '', name: state.data.name, language: lang, text: fullText, has_media: true, file_id: fileId, media_type: mediaType, date: new Date().toISOString(), channel: 'telegram', collected: { ...state.data, request_type: '3d_printing', file_caption: text || '' } });
         await clearState(env, chatId);
-        return send(env, chatId, t(lang).print3d_thanks);
+        return send(env, chatId, t(lang).print3d_thanks + '\n\n🏆 این مأموریت با موفقیت ثبت شد؛ تیم ما حالا بررسی فنی را آغاز می‌کند.');
       }
     }
 
@@ -850,7 +863,7 @@ async function processUpdate(env, update) {
         state.data.name = text;
         state.step = 'consult_phone';
         await setState(env, chatId, state);
-        return send(env, chatId, t(lang).ask_phone, { reply_markup: leadControls(lang) });
+        return send(env, chatId, journeyPrompt(lang, 2, 3, t(lang).ask_phone), { reply_markup: leadControls(lang) });
       }
       if (state.step === 'consult_phone') {
         const phone = msg.contact?.phone_number || text;
@@ -858,39 +871,39 @@ async function processUpdate(env, update) {
         state.data.phone = phone;
         state.step = 'consult_topic';
         await setState(env, chatId, state);
-        return send(env, chatId, t(lang).ask_consult_topic, { reply_markup: leadControls(lang) });
+        return send(env, chatId, journeyPrompt(lang, 3, 3, t(lang).ask_consult_topic), { reply_markup: leadControls(lang) });
       }
       if (state.step === 'consult_topic') {
         state.data.topic = text;
         const fullText = 'درخواست مشاوره\nنام: ' + state.data.name + '\nشماره تماس: ' + state.data.phone + '\nزمینه مشاوره: ' + state.data.topic;
         await saveLead(env, { chat_id: chatId, username: from.username || '', name: state.data.name, language: lang, text: fullText, has_media: false, file_id: null, date: new Date().toISOString(), channel: 'telegram', collected: { ...state.data, request_type: 'consultation' } });
         await clearState(env, chatId);
-        return send(env, chatId, t(lang).consult_thanks);
+        return send(env, chatId, t(lang).consult_thanks + '\n\n🏆 شما یک قدم جدی برای حل مسئله‌تان برداشتید؛ تیم ما حالا درخواست را بررسی می‌کند.');
       }
     }
     if (state.step === 'company') {
       state.data.company = text;
       state.step = 'country';
       await setState(env, chatId, state);
-      return send(env, chatId, t(lang).ask_country, { reply_markup: leadControls(lang, true) });
+      return send(env, chatId, journeyPrompt(lang, 2, 5, t(lang).ask_country), { reply_markup: leadControls(lang, true) });
     }
     if (state.step === 'country') {
       state.data.country = text;
       state.step = 'part';
       await setState(env, chatId, state);
-      return send(env, chatId, t(lang).ask_part, { reply_markup: leadControls(lang, true) });
+      return send(env, chatId, journeyPrompt(lang, 3, 5, t(lang).ask_part), { reply_markup: leadControls(lang, true) });
     }
     if (state.step === 'part') {
       state.data.part = text;
       state.step = 'volume';
       await setState(env, chatId, state);
-      return send(env, chatId, t(lang).ask_volume, { reply_markup: leadControls(lang, true) });
+      return send(env, chatId, journeyPrompt(lang, 4, 5, t(lang).ask_volume), { reply_markup: leadControls(lang, true) });
     }
     if (state.step === 'volume') {
       state.data.volume = text;
       state.step = 'file';
       await setState(env, chatId, state);
-      return send(env, chatId, t(lang).ask_file, { reply_markup: leadControls(lang, true) });
+      return send(env, chatId, journeyPrompt(lang, 5, 5, t(lang).ask_file), { reply_markup: leadControls(lang, true) });
     }
     if (state.step === 'file') {
       const fullText = `شرکت: ${state.data.company}\nکشور: ${state.data.country}\nقطعه: ${state.data.part}\nتیراژ: ${state.data.volume}\nتوضیح اضافی: ${text || '-'}`;
