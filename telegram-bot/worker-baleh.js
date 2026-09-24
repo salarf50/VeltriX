@@ -48,7 +48,8 @@ const TEXT = {
     welcome: 'Hello, good time 🌿\nI’m from the VeltriX technical team. Glad you reached out.\nHow can I help you?',
     menu: 'I can guide you about our mold services:',
     lead_start: 'To review your project better, I’ll ask a few small questions. Is that okay?',
-    ask_company: 'What’s the name of your company?',
+    ask_person_name: 'Please send your full name.',
+    ask_company: 'What is the name of your company?',
     ask_country: 'Which country or city are you based in?',
     ask_part: 'What type of part or product do you need the mold for?',
     ask_volume: 'What’s the approximate production volume?',
@@ -75,6 +76,7 @@ const TEXT = {
     welcome: 'Merhaba, iyi günler 🌿\nVeltriX teknik ekibinden yazıyorum. Mesajınız için teşekkürler.\nSize nasıl yardımcı olabilirim?',
     menu: 'Kalıp hizmetlerimiz hakkında size yardımcı olabilirim:',
     lead_start: 'Projenizi daha iyi inceleyebilmem için birkaç küçük bilgi alabilir miyim?',
+    ask_person_name: 'Lütfen adınızı ve soyadınızı gönderin.',
     ask_company: 'Şirketinizin adı nedir?',
     ask_country: 'Hangi ülke veya şehirdesiniz?',
     ask_part: 'Hangi parça veya ürün için kalıp istiyorsunuz?',
@@ -102,6 +104,7 @@ const TEXT = {
     welcome: 'مرحباً، طاب يومكم 🌿\nأنا من الفريق الفني في VeltriX. سعيد بتواصلكم.\nكيف يمكنني مساعدتكم؟',
     menu: 'يمكنني إرشادكم حول خدمات تصنيع القوالب:',
     lead_start: 'لكي أتمكن من مراجعة مشروعكم بشكل أفضل، هل يمكنني طرح بعض الأسئلة البسيطة؟',
+    ask_person_name: 'يرجى إرسال الاسم الكامل.',
     ask_company: 'ما اسم شركتكم؟',
     ask_country: 'في أي دولة أو مدينة أنتم؟',
     ask_part: 'ما نوع القطعة أو المنتج الذي تحتاجون قالباً له؟',
@@ -129,6 +132,7 @@ const TEXT = {
     welcome: 'Salam, yaxşı günlər 🌿\nVeltriX texniki komandasından yazıram. Mesajınız üçün təşəkkürlər.\nSizə necə kömək edə bilərəm?',
     menu: 'Qəlib xidmətlərimiz haqqında sizə kömək edə bilərəm:',
     lead_start: 'Layihənizi daha yaxşı nəzərdən keçirmək üçün bir neçə kiçik məlumat ala bilərəmmi?',
+    ask_person_name: 'Zəhmət olmasa adınızı və soyadınızı göndərin.',
     ask_company: 'Şirkətinizin adı nədir?',
     ask_country: 'Hansı ölkə və ya şəhərdəsiniz?',
     ask_part: 'Hansı detal və ya məhsul üçün qəlib istəyirsiniz?',
@@ -734,18 +738,18 @@ async function processUpdate(env, update) {
 
     if (q.data === 'lead:back') {
       const state = await getState(env, chatId);
-      const previous = { country: 'company', part: 'country', volume: 'part', file: 'volume' }[state?.step];
-      if (!state || !previous) return send(env, chatId, journeyPrompt(lang, 1, 5, t(lang).lead_start + '\n\n' + t(lang).ask_company), { reply_markup: leadControls(lang) });
+      const previous = { company: 'person_name', phone: 'company', country: 'phone', part: 'country', volume: 'part', file: 'volume' }[state?.step];
+      if (!state || !previous) return send(env, chatId, journeyPrompt(lang, 1, 7, t(lang).lead_start + '\n\n' + t(lang).ask_person_name), { reply_markup: leadControls(lang) });
       delete state.data?.[state.step];
       state.step = previous;
       await setState(env, chatId, state);
-      const question = { company: t(lang).ask_company, country: t(lang).ask_country, part: t(lang).ask_part, volume: t(lang).ask_volume }[previous];
+      const question = { person_name: t(lang).ask_person_name, company: t(lang).ask_company, phone: t(lang).ask_phone, country: t(lang).ask_country, part: t(lang).ask_part, volume: t(lang).ask_volume }[previous];
       return send(env, chatId, `✏️ ${question}`, { reply_markup: leadControls(lang, previous !== 'company') });
     }
 
     if (q.data === 'lead') {
-      await setState(env, chatId, { step: 'company', data: {}, language: lang });
-      return send(env, chatId, journeyPrompt(lang, 1, 5, t(lang).lead_start + '\n\n' + t(lang).ask_company), { reply_markup: leadControls(lang) });
+      await setState(env, chatId, { step: 'person_name', data: {}, language: lang });
+      return send(env, chatId, journeyPrompt(lang, 1, 7, t(lang).lead_start + '\n\n' + t(lang).ask_person_name), { reply_markup: leadControls(lang) });
     }
 
     if (q.data === 'back:menu') {
@@ -889,32 +893,46 @@ async function processUpdate(env, update) {
         return send(env, chatId, t(lang).consult_thanks + '\n\n🏆 شما یک قدم جدی برای حل مسئله‌تان برداشتید؛ تیم ما حالا درخواست را بررسی می‌کند.');
       }
     }
+    if (state.step === 'person_name') {
+      state.data.person_name = text;
+      state.step = 'company';
+      await setState(env, chatId, state);
+      return send(env, chatId, journeyPrompt(lang, 2, 7, t(lang).ask_company), { reply_markup: leadControls(lang, true) });
+    }
     if (state.step === 'company') {
       state.data.company = text;
+      state.step = 'phone';
+      await setState(env, chatId, state);
+      return send(env, chatId, journeyPrompt(lang, 3, 7, t(lang).ask_phone), { reply_markup: leadControls(lang, true) });
+    }
+    if (state.step === 'phone') {
+      const phone = msg.contact?.phone_number || text;
+      if (!validPhone(phone)) return send(env, chatId, t(lang).invalid_phone, { reply_markup: leadControls(lang, true) });
+      state.data.phone = phone;
       state.step = 'country';
       await setState(env, chatId, state);
-      return send(env, chatId, journeyPrompt(lang, 2, 5, t(lang).ask_country), { reply_markup: leadControls(lang, true) });
+      return send(env, chatId, journeyPrompt(lang, 4, 7, t(lang).ask_country), { reply_markup: leadControls(lang, true) });
     }
     if (state.step === 'country') {
       state.data.country = text;
       state.step = 'part';
       await setState(env, chatId, state);
-      return send(env, chatId, journeyPrompt(lang, 3, 5, t(lang).ask_part), { reply_markup: leadControls(lang, true) });
+      return send(env, chatId, journeyPrompt(lang, 5, 7, t(lang).ask_part), { reply_markup: leadControls(lang, true) });
     }
     if (state.step === 'part') {
       state.data.part = text;
       state.step = 'volume';
       await setState(env, chatId, state);
-      return send(env, chatId, journeyPrompt(lang, 4, 5, t(lang).ask_volume), { reply_markup: leadControls(lang, true) });
+      return send(env, chatId, journeyPrompt(lang, 6, 7, t(lang).ask_volume), { reply_markup: leadControls(lang, true) });
     }
     if (state.step === 'volume') {
       state.data.volume = text;
       state.step = 'file';
       await setState(env, chatId, state);
-      return send(env, chatId, journeyPrompt(lang, 5, 5, t(lang).ask_file), { reply_markup: leadControls(lang, true) });
+      return send(env, chatId, journeyPrompt(lang, 7, 7, t(lang).ask_file), { reply_markup: leadControls(lang, true) });
     }
     if (state.step === 'file') {
-      const fullText = `شرکت: ${state.data.company}\nکشور: ${state.data.country}\nقطعه: ${state.data.part}\nتیراژ: ${state.data.volume}\nتوضیح اضافی: ${text || '-'}`;
+      const fullText = `نام: ${state.data.person_name}\nشرکت: ${state.data.company}\nشماره تماس: ${state.data.phone}\nکشور: ${state.data.country}\nقطعه: ${state.data.part}\nتیراژ: ${state.data.volume}\nتوضیح اضافی: ${text || '-'}`;
       await saveLead(env, {
         chat_id: chatId,
         username: from.username || '',
@@ -929,7 +947,7 @@ async function processUpdate(env, update) {
         collected: state.data
       });
       await clearState(env, chatId);
-      return send(env, chatId, t(lang).thanks_lead);
+      return send(env, chatId, t(lang).thanks_lead + '\n\n🏆 اطلاعات تماس و پروژه‌تان کامل ثبت شد؛ تیم فنی حالا بررسی را آغاز می‌کند.');
     }
   }
 
