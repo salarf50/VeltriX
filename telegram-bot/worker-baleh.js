@@ -15,6 +15,7 @@ function adminChatId(env) {
 // ==========================================
 
 const LANGS = ['fa', 'en', 'tr', 'ar', 'az'];
+const BOT_CHANNEL = 'baleh';
 
 const TEXT = {
   fa: {
@@ -311,7 +312,63 @@ async function getState(env, chatId) {
 
 async function setState(env, chatId, state) {
   if (!env.LEADS_KV) return;
-  await env.LEADS_KV.put(`state:${chatId}`, JSON.stringify(state), { expirationTtl: 60 * 60 * 24 * 14 });
+  const next = { ...state, channel: state.channel || BOT_CHANNEL, updated_at: new Date().toISOString() };
+  await env.LEADS_KV.put(`state:${chatId}`, JSON.stringify(next), { expirationTtl: 60 * 60 * 24 * 14 });
+}
+
+function tehranDay(date = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tehran', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+}
+
+async function logActivity(env, event) {
+  if (!env.LEADS_KV) return;
+  const item = { channel: BOT_CHANNEL, date: new Date().toISOString(), day: tehranDay(), ...event };
+  const key = `activity:${item.day}:${Date.now()}:${BOT_CHANNEL}:${item.chat_id}`;
+  await env.LEADS_KV.put(key, JSON.stringify(item), { expirationTtl: 60 * 60 * 24 * 45 });
+}
+
+async function dailyLeadReport(env) {
+  if (!env.LEADS_KV) return;
+  const reportDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const day = tehranDay(reportDate);
+  const listed = await env.LEADS_KV.list({ prefix: `activity:${day}:`, limit: 1000 });
+  const events = [];
+  for (const key of listed.keys || []) {
+    const raw = await env.LEADS_KV.get(key.name);
+    if (!raw) continue;
+    try { const item = JSON.parse(raw); if (item.channel === BOT_CHANNEL) events.push(item); } catch {}
+  }
+  const byUser = new Map();
+  for (const item of events) {
+    const id = String(item.chat_id);
+    if (!byUser.has(id)) byUser.set(id, { chat_id: id, username: item.username || '', name: item.name || '', language: item.language || '-', selections: [], last: item.date });
+    const user = byUser.get(id);
+    if (!user.username) user.username = item.username || '';
+    if (!user.name) user.name = item.name || '';
+    user.language = item.language || user.language;
+    user.last = item.date > user.last ? item.date : user.last;
+    if (item.event === 'service_selected' && item.service) user.selections.push(item.service);
+  }
+  const abandoned = [];
+  const stateKeys = await env.LEADS_KV.list({ prefix: 'state:', limit: 1000 });
+  for (const key of stateKeys.keys || []) {
+    const raw = await env.LEADS_KV.get(key.name);
+    if (!raw) continue;
+    try {
+      const state = JSON.parse(raw);
+      if (state.channel !== BOT_CHANNEL || !state.updated_at || tehranDay(new Date(state.updated_at)) !== day) continue;
+      const id = key.name.slice('state:'.length);
+      const user = byUser.get(id) || { chat_id: id, username: '', name: '', language: state.language || '-', selections: [], last: state.updated_at };
+      user.lastStep = state.step || state.flow || 'نامشخص';
+      abandoned.push(user);
+    } catch {}
+  }
+  const uniqueAbandoned = [...new Map(abandoned.map(x => [x.chat_id, x])).values()];
+  const selected = [...byUser.values()].filter(x => x.selections.length);
+  const lines = [...byUser.values()].map((u, i) => (i + 1) + '. ' + (u.name || 'بدون نام') + ' | @' + (u.username || '-') + ' | ' + u.chat_id + ' | زبان: ' + u.language + ' | انتخاب: ' + (u.selections.join(', ') || 'فقط شروع')).join('\n') || 'موردی ثبت نشده است.';
+  const abandonedLines = uniqueAbandoned.map((u, i) => (i + 1) + '. ' + (u.name || 'بدون نام') + ' | ' + u.chat_id + ' | مرحله: ' + (u.lastStep || '-') + ' | انتخاب: ' + (u.selections.join(', ') || '-')).join('\n') || 'موردی شناسایی نشد.';
+  const report = '📊 <b>گزارش روزانهٔ ربات VeltriX</b>\n📅 تاریخ: ' + day + '\n\n👥 شروع‌کنندگان یکتا: <b>' + byUser.size + '</b>\n🎯 انتخاب‌کنندگان خدمت: <b>' + selected.length + '</b>\n🛑 رهاکرده‌های شناسایی‌شده: <b>' + uniqueAbandoned.length + '</b>\n\n<b>شروع‌ها و انتخاب‌ها</b>\n' + lines + '\n\n<b>رهاکردن در مرحله</b>\n' + abandonedLines;
+  await send(env, adminChatId(env), report);
 }
 
 async function clearState(env, chatId) {
@@ -754,6 +811,7 @@ async function processUpdate(env, update) {
     if (q.data.startsWith('lang:')) {
       const selected = normalizeLanguage(q.data.slice(5));
       await setLanguage(env, chatId, selected);
+      await logActivity(env, { event: 'language_selected', chat_id: chatId, username: q.from?.username || '', name: [q.from?.first_name, q.from?.last_name].filter(Boolean).join(' '), language: selected });
       await clearState(env, chatId);
       return send(env, chatId, t(selected).welcome, { reply_markup: menu(selected) });
     }
@@ -795,6 +853,7 @@ async function processUpdate(env, update) {
 
     if (!q.data.startsWith('service:')) return;
     const serviceId = q.data.slice('service:'.length);
+    await logActivity(env, { event: 'service_selected', service: serviceId, chat_id: chatId, username: q.from?.username || '', language: lang });
     if (serviceId === 'print3d') {
       await setState(env, chatId, { flow: 'print3d', step: 'print3d_name', data: {}, language: lang });
       return send(env, chatId, journeyPrompt(lang, 1, 3, t(lang).print3d_start + '\n\n' + t(lang).ask_name), { reply_markup: leadControls(lang) });
@@ -859,6 +918,7 @@ async function processUpdate(env, update) {
   const lang = savedLanguage || (text ? detectLanguage(text, from.language_code) : normalizeLanguage(from.language_code || 'en'));
 
   if (text.startsWith('/start') || text.startsWith('/menu')) {
+    await logActivity(env, { event: 'start', chat_id: chatId, username: from.username || '', name: [from.first_name, from.last_name].filter(Boolean).join(' '), language: from.language_code || '-' });
     await clearState(env, chatId);
     return send(env, chatId, '🌿 به VeltriX خوش آمدید\nWelcome to VeltriX\nVeltriX\'e hoş geldiniz\nمرحباً بكم في VeltriX\nVeltriX-ə xoş gəlmisiniz\n\n✨ شما آماده‌اید یک قدم واقعی برای تبدیل ایده‌تان به نتیجه بردارید. زبان خود را انتخاب کنید تا مسیر را با هم شروع کنیم.', { reply_markup: languageMenu() });
   }
@@ -1058,7 +1118,9 @@ export default {
   },
 
   async scheduled(controller, env, ctx) {
-    if (controller.cron === '31 5 * * 1') {
+    if (controller.cron === '30 20 * * *') {
+      ctx.waitUntil(dailyLeadReport(env));
+    } else if (controller.cron === '31 5 * * 1') {
       ctx.waitUntil(weeklyReview(env));
     } else {
       ctx.waitUntil(sendDailyReminder(env));
