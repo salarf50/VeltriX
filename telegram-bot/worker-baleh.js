@@ -1119,11 +1119,13 @@ export default {
 
   async scheduled(controller, env, ctx) {
     if (controller.cron === '30 20 * * *') {
-      ctx.waitUntil(dailyLeadReport(env));
-    } else if (controller.cron === '31 5 * * 1') {
-      ctx.waitUntil(weeklyReview(env));
-    } else {
-      ctx.waitUntil(sendDailyReminder(env));
+      ctx.waitUntil((async () => {
+        await dailyLeadReport(env);
+        await sendDailyReminder(env);
+        const previousDay = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const weekday = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Tehran', weekday: 'short' }).format(previousDay);
+        if (weekday === 'Sun') await weeklyReview(env);
+      })());
     }
   }
 };
