@@ -196,12 +196,41 @@ function journeyPrompt(lang, step, total, question) {
   return '✨ ' + label + ' ' + step + '/' + total + '\n' + note + '\n\n' + question;
 }
 
+const ACTIONS = {
+  fa: {
+    location: '📍 مسیریابی با نشان', contact: '📞 دریافت شماره تماس',
+    locationMessage: '📍 لینک مسیریابی VeltriX در نرم‌افزار نشان:\nhttps://nshn.ir/rbAyVnpCdN0H',
+    contactMessage: '📞 شماره تماس VeltriX: +989141026956\nاین شماره هر روز از ساعت ۸ صبح تا ۷ عصر پاسخ‌گو است.\n\nدر بله، روبیکا، واتساپ و دایرکت اینستاگرام نیز پاسخ‌گو هستیم؛ اما برای دریافت سریع‌تر پاسخ، بهتر است از ربات استفاده کنید.'
+  },
+  en: {
+    location: '📍 Navigate with Neshan', contact: '📞 Get phone number',
+    locationMessage: '📍 VeltriX location link in Neshan:\nhttps://nshn.ir/rbAyVnpCdN0H',
+    contactMessage: '📞 VeltriX phone: +989141026956\nWe respond every day from 8:00 AM to 7:00 PM.\n\nWe also respond on Baleh, Rubika, WhatsApp and Instagram Direct. For a faster response, please use the bot.'
+  },
+  tr: {
+    location: '📍 Neshan ile yol tarifi', contact: '📞 Telefon numarasını al',
+    locationMessage: '📍 VeltriX Neshan konum bağlantısı:\nhttps://nshn.ir/rbAyVnpCdN0H',
+    contactMessage: '📞 VeltriX telefon: +989141026956\nHer gün 08:00-19:00 arasında yanıt veriyoruz.\n\nBaleh, Rubika, WhatsApp ve Instagram Direct üzerinden de yanıt veriyoruz; daha hızlı cevap için botu kullanmanız önerilir.'
+  },
+  ar: {
+    location: '📍 الاتجاه عبر نشان', contact: '📞 الحصول على رقم الهاتف',
+    locationMessage: '📍 رابط موقع VeltriX في تطبيق نشان:\nhttps://nshn.ir/rbAyVnpCdN0H',
+    contactMessage: '📞 هاتف VeltriX: +989141026956\nنجيب يومياً من الساعة 8 صباحاً حتى 7 مساءً.\n\nنجيب أيضاً عبر بله وروبيكا وواتساب والرسائل المباشرة في إنستغرام؛ وللحصول على رد أسرع يُفضّل استخدام الروبوت.'
+  },
+  az: {
+    location: '📍 Neshan ilə istiqamət', contact: '📞 Telefon nömrəsini al',
+    locationMessage: '📍 VeltriX-in Neshan xəritə bağlantısı:\nhttps://nshn.ir/rbAyVnpCdN0H',
+    contactMessage: '📞 VeltriX telefonu: +989141026956\nHər gün səhər 8-dən axşam 7-yə qədər cavab veririk.\n\nBaleh, Rubika, WhatsApp və Instagram Direct-də də cavab veririk; daha sürətli cavab üçün botdan istifadə etməyiniz tövsiyə olunur.'
+  }
+};
+
 function menu(lang) {
   const texts = t(lang);
   return {
     inline_keyboard: [
       ...texts.services.map(([label, id]) => [{ text: label, callback_data: `service:${id}` }]),
-      [{ text: texts.project_review, callback_data: 'lead' }]
+      [{ text: texts.project_review, callback_data: 'lead' }],
+      [{ text: (ACTIONS[lang] || ACTIONS.en).location, callback_data: 'location' }, { text: (ACTIONS[lang] || ACTIONS.en).contact, callback_data: 'contact' }]
     ]
   };
 }
@@ -754,6 +783,14 @@ async function processUpdate(env, update) {
 
     if (q.data === 'back:menu') {
       return send(env, chatId, t(lang).menu, { reply_markup: menu(lang) });
+    }
+
+    if (q.data === 'location') {
+      return send(env, chatId, (ACTIONS[lang] || ACTIONS.en).locationMessage, { reply_markup: backMenu(lang) });
+    }
+
+    if (q.data === 'contact') {
+      return send(env, chatId, (ACTIONS[lang] || ACTIONS.en).contactMessage, { reply_markup: backMenu(lang) });
     }
 
     if (!q.data.startsWith('service:')) return;
