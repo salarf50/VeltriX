@@ -231,6 +231,7 @@ function menu(lang) {
     inline_keyboard: [
       ...texts.services.map(([label, id]) => [{ text: label, callback_data: `service:${id}` }]),
       [{ text: texts.project_review, callback_data: 'lead' }],
+      [{ text: ({ fa: '🧮 ماشین‌حساب CNC', en: '🧮 CNC calculator', tr: '🧮 CNC hesaplayıcı', ar: '🧮 حاسبة CNC', az: '🧮 CNC kalkulyatoru' }[lang] || '🧮 CNC calculator'), callback_data: 'cnc:open' }],
       [{ text: (ACTIONS[lang] || ACTIONS.en).location, callback_data: 'location' }, { text: (ACTIONS[lang] || ACTIONS.en).contact, callback_data: 'contact' }]
     ]
   };
@@ -850,6 +851,12 @@ async function processUpdate(env, update) {
 
     if (q.data === 'contact') {
       return send(env, chatId, (ACTIONS[lang] || ACTIONS.en).contactMessage, { reply_markup: backMenu(lang) });
+    }
+
+    if (q.data === 'cnc:open') {
+      await logActivity(env, { event: 'calculator_open', source: 'bot_menu', chat_id: chatId, username: q.from?.username || '', language: lang });
+      const calculatorText = { fa: '🧮 ماشین‌حساب پارامترهای CNC\n\nبرای محاسبهٔ اولیهٔ RPM، Feed، Chip Load، Stepdown و Stepover این لینک را باز کنید:\nhttps://veltrixmold.ir/cnc-calculator.html?source=bot_menu', en: '🧮 CNC machining calculator\n\nOpen this link for initial RPM, Feed, Chip Load, Stepdown and Stepover estimates:\nhttps://veltrixmold.ir/cnc-calculator.html?source=bot_menu', tr: '🧮 CNC hesaplayıcı\n\nİlk RPM, Feed, Chip Load, Stepdown ve Stepover tahmini için bu bağlantıyı açın:\nhttps://veltrixmold.ir/cnc-calculator.html?source=bot_menu', ar: '🧮 حاسبة CNC\n\nافتحوا هذا الرابط للحصول على تقدير أولي لـ RPM وFeed وChip Load وStepdown وStepover:\nhttps://veltrixmold.ir/cnc-calculator.html?source=bot_menu', az: '🧮 CNC kalkulyatoru\n\nİlkin RPM, Feed, Chip Load, Stepdown və Stepover hesablaması üçün bu keçidi açın:\nhttps://veltrixmold.ir/cnc-calculator.html?source=bot_menu' };
+      return send(env, chatId, calculatorText[lang] || calculatorText.en, { reply_markup: backMenu(lang) });
     }
 
     if (!q.data.startsWith('service:')) return;
