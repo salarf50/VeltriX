@@ -326,6 +326,51 @@ async function logActivity(env, event) {
   const item = { channel: BOT_CHANNEL, date: new Date().toISOString(), day: tehranDay(), ...event };
   const key = `activity:${item.day}:${Date.now()}:${BOT_CHANNEL}:${item.chat_id}`;
   await env.LEADS_KV.put(key, JSON.stringify(item), { expirationTtl: 60 * 60 * 24 * 45 });
+  if (item.event === 'start' && item.chat_id != null) {
+    await env.LEADS_KV.put(`stats:bot-user:${BOT_CHANNEL}:${item.chat_id}`, '1');
+  }
+}
+
+
+function publicStatsHeaders(origin = '') {
+  const allowed = origin === 'https://veltrixmold.ir' || origin === 'https://www.veltrixmold.ir';
+  return {
+    'content-type': 'application/json; charset=utf-8',
+    'cache-control': 'no-store',
+    'access-control-allow-origin': allowed ? origin : 'https://veltrixmold.ir',
+    'access-control-allow-methods': 'GET, POST, OPTIONS',
+    'access-control-allow-headers': 'content-type'
+  };
+}
+async function countKvKeys(env, prefix) {
+  if (!env.LEADS_KV) return 0;
+  let cursor;
+  let total = 0;
+  do {
+    const page = await env.LEADS_KV.list({ prefix, limit: 1000, ...(cursor ? { cursor } : {}) });
+    total += (page.keys || []).length;
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor);
+  return total;
+}
+async function publicStatsResponse(request, env) {
+  const origin = request.headers.get('Origin') || '';
+  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: publicStatsHeaders(origin) });
+  if (request.method === 'GET') {
+    const online = await countKvKeys(env, 'stats:site-online:');
+    const telegram = await countKvKeys(env, 'stats:bot-user:telegram:');
+    const baleh = await countKvKeys(env, 'stats:bot-user:baleh:');
+    return new Response(JSON.stringify({ online, bot_users_total: telegram + baleh, bot_users: { telegram, baleh }, updated_at: new Date().toISOString() }), { headers: publicStatsHeaders(origin) });
+  }
+  if (request.method === 'POST') {
+    let body;
+    try { body = await request.json(); } catch { return new Response(JSON.stringify({ ok: false }), { status: 400, headers: publicStatsHeaders(origin) }); }
+    const visitorId = String(body?.visitor_id || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 100);
+    if (!visitorId) return new Response(JSON.stringify({ ok: false }), { status: 400, headers: publicStatsHeaders(origin) });
+    await env.LEADS_KV?.put(`stats:site-online:${visitorId}`, '1', { expirationTtl: 5 * 60 });
+    return new Response(JSON.stringify({ ok: true }), { headers: publicStatsHeaders(origin) });
+  }
+  return new Response(JSON.stringify({ ok: false }), { status: 405, headers: publicStatsHeaders(origin) });
 }
 
 async function dailyLeadReport(env) {
@@ -1106,6 +1151,9 @@ export default {
       return new Response(JSON.stringify({ ok: true, service: 'veltrix-bot' }), {
         headers: { 'content-type': 'application/json' }
       });
+    }
+    if (url.pathname === '/public-stats' || url.pathname === '/public-stats/heartbeat') {
+      return publicStatsResponse(request, env);
     }
 
     if (request.method !== 'POST' || url.pathname !== `/telegram/${env.WEBHOOK_SECRET}`) {
