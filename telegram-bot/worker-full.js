@@ -338,13 +338,14 @@ async function dailyLeadReport(env) {
   const byUser = new Map();
   for (const item of events) {
     const id = String(item.chat_id);
-    if (!byUser.has(id)) byUser.set(id, { chat_id: id, username: item.username || '', name: item.name || '', language: item.language || '-', selections: [], last: item.date });
+    if (!byUser.has(id)) byUser.set(id, { chat_id: id, username: item.username || '', name: item.name || '', language: item.language || '-', selections: [], sources: [], last: item.date });
     const user = byUser.get(id);
     if (!user.username) user.username = item.username || '';
     if (!user.name) user.name = item.name || '';
     user.language = item.language || user.language;
     user.last = item.date > user.last ? item.date : user.last;
     if (item.event === 'service_selected' && item.service) user.selections.push(item.service);
+    if (item.event === 'start' && item.source && !user.sources.includes(item.source)) user.sources.push(item.source);
   }
   const abandoned = [];
   const stateKeys = await env.LEADS_KV.list({ prefix: 'state:', limit: 1000 });
@@ -355,14 +356,14 @@ async function dailyLeadReport(env) {
       const state = JSON.parse(raw);
       if (state.channel !== BOT_CHANNEL || !state.updated_at || tehranDay(new Date(state.updated_at)) !== day) continue;
       const id = key.name.slice('state:'.length);
-      const user = byUser.get(id) || { chat_id: id, username: '', name: '', language: state.language || '-', selections: [], last: state.updated_at };
+      const user = byUser.get(id) || { chat_id: id, username: '', name: '', language: state.language || '-', selections: [], sources: [], last: state.updated_at };
       user.lastStep = state.step || state.flow || 'نامشخص';
       abandoned.push(user);
     } catch {}
   }
   const uniqueAbandoned = [...new Map(abandoned.map(x => [x.chat_id, x])).values()];
   const selected = [...byUser.values()].filter(x => x.selections.length);
-  const lines = [...byUser.values()].map((u, i) => (i + 1) + '. ' + (u.name || 'بدون نام') + ' | @' + (u.username || '-') + ' | ' + u.chat_id + ' | زبان: ' + u.language + ' | انتخاب: ' + (u.selections.join(', ') || 'فقط شروع')).join('\n') || 'موردی ثبت نشده است.';
+  const lines = [...byUser.values()].map((u, i) => (i + 1) + '. ' + (u.name || 'بدون نام') + ' | @' + (u.username || '-') + ' | ' + u.chat_id + ' | زبان: ' + u.language + ' | منبع: ' + (u.sources.join(', ') || '-') + ' | انتخاب: ' + (u.selections.join(', ') || 'فقط شروع')).join('\n') || 'موردی ثبت نشده است.';
   const abandonedLines = uniqueAbandoned.map((u, i) => (i + 1) + '. ' + (u.name || 'بدون نام') + ' | ' + u.chat_id + ' | مرحله: ' + (u.lastStep || '-') + ' | انتخاب: ' + (u.selections.join(', ') || '-')).join('\n') || 'موردی شناسایی نشد.';
   const report = '📊 <b>گزارش روزانهٔ ربات VeltriX</b>\n📅 تاریخ: ' + day + '\n\n👥 شروع‌کنندگان یکتا: <b>' + byUser.size + '</b>\n🎯 انتخاب‌کنندگان خدمت: <b>' + selected.length + '</b>\n🛑 رهاکرده‌های شناسایی‌شده: <b>' + uniqueAbandoned.length + '</b>\n\n<b>شروع‌ها و انتخاب‌ها</b>\n' + lines + '\n\n<b>رهاکردن در مرحله</b>\n' + abandonedLines;
   await send(env, ADMIN_CHAT_ID, report);
@@ -910,7 +911,8 @@ async function processUpdate(env, update) {
   const lang = savedLanguage || (text ? detectLanguage(text, from.language_code) : normalizeLanguage(from.language_code || 'en'));
 
   if (text.startsWith('/start') || text.startsWith('/menu')) {
-    await logActivity(env, { event: 'start', chat_id: chatId, username: from.username || '', name: [from.first_name, from.last_name].filter(Boolean).join(' '), language: from.language_code || '-' });
+    const startPayload = text.split(/\s+/)[1] || '';
+    await logActivity(env, { event: 'start', source: startPayload || 'direct', chat_id: chatId, username: from.username || '', name: [from.first_name, from.last_name].filter(Boolean).join(' '), language: from.language_code || '-' });
     await clearState(env, chatId);
     return send(env, chatId, '🌿 به VeltriX خوش آمدید\nWelcome to VeltriX\nVeltriX\'e hoş geldiniz\nمرحباً بكم في VeltriX\nVeltriX-ə xoş gəlmisiniz\n\n✨ شما آماده‌اید یک قدم واقعی برای تبدیل ایده‌تان به نتیجه بردارید. زبان خود را انتخاب کنید تا مسیر را با هم شروع کنیم.', { reply_markup: languageMenu() });
   }
