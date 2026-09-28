@@ -348,6 +348,17 @@ function publicStatsHeaders(origin = '') {
     'access-control-allow-headers': 'content-type'
   };
 }
+async function countKvKeys(env, prefix) {
+  if (!env.LEADS_KV) return 0;
+  let cursor;
+  let total = 0;
+  do {
+    const page = await env.LEADS_KV.list({ prefix, limit: 1000, ...(cursor ? { cursor } : {}) });
+    total += (page.keys || []).length;
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor);
+  return total;
+}
 async function publicStatsResponse(request, env) {
   const origin = request.headers.get('Origin') || '';
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: publicStatsHeaders(origin) });
