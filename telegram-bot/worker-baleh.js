@@ -326,11 +326,20 @@ async function logActivity(env, event) {
   const item = { channel: BOT_CHANNEL, date: new Date().toISOString(), day: tehranDay(), ...event };
   const key = `activity:${item.day}:${Date.now()}:${BOT_CHANNEL}:${item.chat_id}`;
   await env.LEADS_KV.put(key, JSON.stringify(item), { expirationTtl: 60 * 60 * 24 * 45 });
-  if (item.event === 'start' && item.chat_id != null) {
-    await env.LEADS_KV.put(`stats:bot-user:${BOT_CHANNEL}:${item.chat_id}`, '1');
-  }
+  if (item.event === 'start' && item.chat_id != null) await recordBotUserStat(env, item.chat_id);
 }
 
+
+async function recordBotUserStat(env, chatId) {
+  if (!env.LEADS_KV || chatId == null) return;
+  const marker = `stats:bot-user:${BOT_CHANNEL}:${chatId}`;
+  const exists = await env.LEADS_KV.get(marker);
+  if (exists) return;
+  await env.LEADS_KV.put(marker, '1');
+  const counterKey = `stats:bot-user-count:${BOT_CHANNEL}`;
+  const current = Number(await env.LEADS_KV.get(counterKey) || 0);
+  await env.LEADS_KV.put(counterKey, String(current + 1));
+}
 
 function publicStatsHeaders(origin = '') {
   const allowed = origin === 'https://veltrixmold.ir' || origin === 'https://www.veltrixmold.ir';
@@ -342,25 +351,15 @@ function publicStatsHeaders(origin = '') {
     'access-control-allow-headers': 'content-type'
   };
 }
-async function countKvKeys(env, prefix) {
-  if (!env.LEADS_KV) return 0;
-  let cursor;
-  let total = 0;
-  do {
-    const page = await env.LEADS_KV.list({ prefix, limit: 1000, ...(cursor ? { cursor } : {}) });
-    total += (page.keys || []).length;
-    cursor = page.list_complete ? undefined : page.cursor;
-  } while (cursor);
-  return total;
-}
 async function publicStatsResponse(request, env) {
   const origin = request.headers.get('Origin') || '';
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: publicStatsHeaders(origin) });
   if (request.method === 'GET') {
     const online = await countKvKeys(env, 'stats:site-online:');
-    const telegram = await countKvKeys(env, 'stats:bot-user:telegram:');
-    const baleh = await countKvKeys(env, 'stats:bot-user:baleh:');
-    return new Response(JSON.stringify({ online, bot_users_total: telegram + baleh, bot_users: { telegram, baleh }, updated_at: new Date().toISOString() }), { headers: publicStatsHeaders(origin) });
+    const telegram = Number(await env.LEADS_KV?.get('stats:bot-user-count:telegram') || 0);
+    const baleh = Number(await env.LEADS_KV?.get('stats:bot-user-count:baleh') || 0);
+    const headers = { ...publicStatsHeaders(origin), 'cache-control': 'public, max-age=300, s-maxage=300' };
+    return new Response(JSON.stringify({ online, bot_users_total: telegram + baleh, bot_users: { telegram, baleh }, updated_at: new Date().toISOString() }), { headers });
   }
   if (request.method === 'POST') {
     let body;
@@ -538,40 +537,28 @@ async function saveSurvey(env, chatId, survey) {
   await env.LEADS_KV.put(`latest_survey:${chatId}`, key);
 }
 
-async function weeklyReview(env) {
+async function monthlyOverview(env) {
   if (!env.LEADS_KV) return;
-  const listed = await env.LEADS_KV.list({ prefix: 'lead:', limit: 1000 });
-  const completed = [];
-  for (const key of listed.keys || []) {
-    const raw = await env.LEADS_KV.get(key.name);
-    if (!raw) continue;
-    try {
-      const lead = JSON.parse(raw);
-      if (lead.status === 'done') {
-        const surveyKey = await env.LEADS_KV.get(`latest_survey:${lead.chat_id}`);
-        const survey = surveyKey ? JSON.parse(await env.LEADS_KV.get(surveyKey) || '{}') : {};
-        completed.push({ lead, survey });
-      }
-    } catch {}
-  }
-  if (!completed.length) {
-    await send(env, adminChatId(env), '📊 گزارش هفتگی\n\nهنوز مشتری تکمیل‌شده‌ای برای تحلیل هفتگی وجود ندارد.');
-    return;
-  }
+  const leads = await latestLeads(env);
+  const open = leads.filter(lead => !isCompletedLead(lead));
+  const done = leads.length - open.length;
+  const month = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tehran', year: 'numeric', month: '2-digit' }).format(new Date());
+  const recipient = adminChatId(env);
+  await send(env, recipient, `📊 <b>گزارش کلی ماهانهٔ VeltriX</b>
+📅 ماه: <b>${month}</b>
 
-  await send(env, adminChatId(env), `📊 <b>گزارش هفتگی مشتری‌ها</b>\nتعداد مشتری‌های تکمیل‌شده: <b>${completed.length}</b>`);
-  for (const { lead, survey } of completed.slice(0, 40)) {
-    let review = `نقاط قوت: دریافت موفق درخواست مشتری و تکمیل پرونده\nنقاط ضعف: داده کافی برای تحلیل دقیق وجود ندارد\nاقدام پیشنهادی: یک پیگیری کوتاه برای دریافت بازخورد بیشتر`;
-    if (env.AI) {
-      try {
-        const result = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', { messages: [
-          { role: 'system', content: 'به فارسی و کوتاه، فقط در سه خط با برچسب‌های «نقاط قوت»، «نقاط ضعف»، «اقدام پیشنهادی» گزارش بده. از ادعای بدون داده خودداری کن.' },
-          { role: 'user', content: JSON.stringify({ lead: { company: lead.collected?.company, country: lead.collected?.country, part: lead.collected?.part, volume: lead.collected?.volume, sentiment: lead.sentiment, status: lead.status }, survey }) }
-        ] });
-        review = result?.response || review;
-      } catch {}
-    }
-    await send(env, adminChatId(env), `👤 <b>${lead.name || 'بدون نام'}</b>\n🏢 ${lead.collected?.company || '-'}\n⭐ امتیاز رضایت: ${survey.rating || 'ثبت نشده'}\n\n${review}`, { reply_markup: adminLeadKeyboard(lead) });
+کل پرونده‌های ثبت‌شده: <b>${leads.length}</b>
+اتمام‌یافته با تأیید ادمین: <b>${done}</b>
+باز و نیازمند پیگیری: <b>${open.length}</b>
+
+فقط پرونده‌هایی که هنوز «اتمام کار مشتری» برایشان ثبت نشده، در ادامه نمایش داده می‌شوند.`);
+  for (const lead of open.sort((a, b) => String(a.date || '').localeCompare(String(b.date || ''))).slice(0, 40)) {
+    await send(env, recipient, `👤 <b>${lead.name || 'بدون نام'}</b>
+🏢 ${lead.collected?.company || '-'}
+📌 وضعیت: <b>${lead.status || 'new'}</b>
+🌐 زبان: ${lead.language || '-'}
+📥 کانال: ${lead.channel || '-'}
+🆔 <code>${lead.chat_id}</code>`, { reply_markup: adminLeadKeyboard(lead) });
   }
 }
 
@@ -1177,11 +1164,8 @@ export default {
   async scheduled(controller, env, ctx) {
     if (controller.cron === '30 20 * * *') {
       ctx.waitUntil((async () => {
-        await dailyLeadReport(env);
         await sendDailyReminder(env);
-        const previousDay = new Date(Date.now() - 24 * 60 * 60 * 1000);
-        const weekday = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Tehran', weekday: 'short' }).format(previousDay);
-        if (weekday === 'Sun') await weeklyReview(env);
+        if (tehranDay(new Date()).endsWith('-01')) await monthlyOverview(env);
       })());
     }
   }

@@ -4,8 +4,8 @@
   const STATS_ENDPOINT = 'https://veltrix-telegram-bot.ali-fayyazi439.workers.dev/public-stats';
   const HEARTBEAT_ENDPOINT = `${STATS_ENDPOINT}/heartbeat`;
   const visitorKey = 'veltrix_public_visitor_id';
-  const heartbeatEveryMs = 60 * 1000;
-  const refreshEveryMs = 90 * 1000;
+  const heartbeatEveryMs = 5 * 60 * 1000;
+  const refreshEveryMs = 10 * 60 * 1000;
 
   function getVisitorId() {
     try {
@@ -88,7 +88,7 @@
 
   async function refresh() {
     try {
-      const response = await fetch(STATS_ENDPOINT, { mode: 'cors', cache: 'no-store' });
+      const response = await fetch(STATS_ENDPOINT, { mode: 'cors', cache: 'default' });
       if (!response.ok) return;
       render(await response.json());
     } catch { /* نوار در صورت قطعی آمار مزاحم صفحه نمی‌شود */ }
