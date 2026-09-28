@@ -11,5 +11,5 @@ id = "cfccb3410e0e44648a5636f937884350"
 binding = "AI"
 
 [triggers]
-# 09:00 Asia/Tehran is 05:30 UTC.
+# The daily job runs at 00:00 Asia/Tehran (20:30 UTC on the previous day).
 crons = ["30 20 * * *"]
