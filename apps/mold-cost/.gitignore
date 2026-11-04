@@ -1,0 +1,15 @@
+node_modules/
+.wrangler/
+dist-worker/
+.dev.vars
+.dev.vars.*
+.env
+.env.*
+!/.env.example
+android/.gradle/
+android/app/build/
+android/build/
+android/*.jks
+android/*.keystore
+android/*keystore*.json
+android/app-release*.apk

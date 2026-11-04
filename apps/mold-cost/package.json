@@ -1,0 +1,22 @@
+{
+  "name": "veltrix-mold-cost",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "npm@10.9.9",
+  "scripts": {
+    "predev": "node scripts/embed-assets.mjs",
+    "dev": "wrangler dev --local --ip 0.0.0.0 --port 3000",
+    "prebuild": "node scripts/embed-assets.mjs",
+    "build": "tsc --noEmit && wrangler deploy --dry-run --outdir dist-worker",
+    "test": "node --test",
+    "test:integration": "wrangler d1 execute veltrix-mold-cost-db --local --command \"DELETE FROM rate_limits\" && node scripts/integration-smoke.mjs",
+    "predeploy": "node scripts/embed-assets.mjs",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261102.1",
+    "typescript": "7.0.2",
+    "wrangler": "4.156.1"
+  }
+}

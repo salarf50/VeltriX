@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#09131f">
+  <meta name="description" content="ابزار مستقل برآورد تقریبی هزینه ساخت قالب؛ محاسبه فولاد، هزینه‌های ساخت و قیمت پیشنهادی.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="برآورد قالب">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>برآورد هزینه قالب | VeltriX</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="VeltriX Mold Cost">
+        <img src="/icons/icon-192.png" alt="" width="42" height="42">
+        <span><b>VELTRI<span class="brand-x">X</span></b><small>برآورد هزینه قالب</small></span>
+      </a>
+      <div class="top-actions">
+        <details class="support-menu">
+          <summary class="button button-quiet">پشتیبانی</summary>
+          <div class="support-menu-panel">
+            <b>پشتیبانی نرم‌افزار</b>
+            <a id="supportTelegramMenu" href="https://t.me/veltrixmold_bot" target="_blank" rel="noopener noreferrer">ربات تلگرام ↗</a>
+            <a id="supportBaleMenu" href="#" target="_blank" rel="noopener noreferrer" hidden>ربات بله ↗</a>
+            <small id="supportBalePending">پیوند ربات بله پس از تأیید نام کاربری تنظیم می‌شود.</small>
+          </div>
+        </details>
+        <button id="installButton" class="button button-quiet" type="button" hidden>نصب روی دستگاه</button>
+        <button id="logoutButton" class="button button-quiet" type="button" hidden>خروج</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="intro">
+        <p class="eyebrow"><span class="eyebrow-mark"></span> ابزار مستقل مهندسی / برآورد اولیه</p>
+        <div class="intro-row">
+          <div>
+            <h1>هزینهٔ قالب را<br><span>شفاف برآورد کنید.</span></h1>
+            <p class="intro-copy">وزن فولاد و مراحل ساخت را وارد کنید؛ قیمت پیشنهادی را با ضریب و پلهٔ گردکردن خودتان ببینید.</p>
+          </div>
+          <div class="intro-stamp" aria-hidden="true"><span>VX</span><small>TOOL<br>01</small></div>
+        </div>
+        <div class="notice notice-gold"><span class="notice-symbol">i</span><p>این خروجی فقط برآورد اولیه است و قیمت قطعی محسوب نمی‌شود. نتیجه را با شرایط واقعی پروژه بررسی کنید.</p></div>
+      </section>
+
+      <section id="authPanel" class="panel auth-panel">
+        <div class="section-head">
+          <div><p class="step-kicker">۰۱ / شروع</p><h2>ساخت حساب کاربری</h2></div>
+          <span class="lock-mark" aria-hidden="true">V</span>
+        </div>
+        <p class="muted">برای نگهداری سهمیهٔ ماهانه، مشخصات کارگاه را وارد کنید.</p>
+        <form id="registerForm" novalidate>
+          <div class="form-grid">
+            <label class="field"><span>نام و نام خانوادگی</span><input name="name" autocomplete="name" maxlength="100" required placeholder="مثلاً علی رضایی"></label>
+            <label class="field"><span>نام کارگاه یا شرکت</span><input name="workshop" autocomplete="organization" maxlength="120" required placeholder="نام مجموعه"></label>
+            <label class="field field-wide"><span>شماره تلفن</span><input name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="24" required placeholder="مثلاً 0912…" dir="ltr"></label>
+          </div>
+          <div class="social-confirm">
+            <a href="https://www.instagram.com/veltrix_mold/" target="_blank" rel="noopener noreferrer">صفحهٔ VeltriX در اینستاگرام را باز کنید ↗</a>
+            <label class="check-line"><input name="followConfirmed" type="checkbox"><span>این صفحه را دنبال کرده‌ام</span></label>
+            <small>این گزینه فقط تأیید خوداظهاری است و فالو را به‌صورت خودکار اثبات نمی‌کند.</small>
+          </div>
+          <details class="privacy-details">
+            <summary>اطلاعیهٔ حریم خصوصی و گزارش استفاده</summary>
+            <p>نام، کارگاه و تلفن برای مدیریت حساب، سهمیه و پشتیبانی در پایگاه داده ذخیره می‌شود. شناسهٔ حساب، زمان و تعداد استفاده‌ها از طریق ربات‌های تلگرام و بله برای مدیر VeltriX گزارش می‌شود؛ شماره تلفن و مبلغ‌های برآورد در این گزارش ارسال نمی‌شوند. داده‌های حساب تا زمان حذف حساب نگهداری می‌شوند و با حذف حساب، نشست‌ها و سوابق مصرف نیز حذف خواهند شد.</p>
+            <p>شماره تلفن در این نسخه با پیامک تأیید نمی‌شود؛ واردکردن شماره به‌تنهایی اثبات هویت نیست. از این حساب برای نگهداری دادهٔ حساس استفاده نکنید.</p>
+          </details>
+          <label class="check-card"><input name="privacyAccepted" type="checkbox" required><span>اطلاعیهٔ حریم خصوصی و گزارش‌دهی را خواندم و جداگانه می‌پذیرم.</span></label>
+          <p id="registerError" class="form-error" role="alert" hidden></p>
+          <button class="button button-primary button-wide" type="submit">ثبت‌نام و ادامه <span aria-hidden="true">←</span></button>
+        </form>
+      </section>
+
+      <section id="calculatorSection" hidden>
+        <div class="account-strip panel">
+          <div class="account-details">
+            <div><span class="status-dot" aria-hidden="true"></span><span id="accountLabel">حساب شما</span></div>
+            <small class="account-id-line">شناسهٔ حساب: <code id="accountIdLabel" dir="ltr"></code><button id="copyAccountId" type="button" class="text-button">کپی شناسه</button></small>
+          </div>
+          <strong id="quotaLabel">در حال دریافت سهمیه…</strong>
+          <button id="refreshStatus" type="button" class="text-button">به‌روزرسانی</button>
+        </div>
+        <div id="adminPendingNotice" class="notice admin-pending" hidden>
+          <p>شمارهٔ ثبت‌شده به‌تنهایی هویت مدیر را ثابت نمی‌کند. اگر این حساب باید مدیر باشد، شناسهٔ حساب را کپی کنید تا مدیرِ تأییدشدهٔ VeltriX از گفت‌وگوی خصوصی ربات فرمان <code>/admin USER_ID</code> را اجرا کند؛ پس از تأیید، این حساب استفادهٔ محاسباتی نامحدود خواهد داشت.</p>
+        </div>
+        <div id="supportNotice" class="notice notice-warn" hidden>
+          <p id="supportMessage">سهمیهٔ رایگان این ماه تمام شده است.</p>
+          <div class="support-notice-links">
+            <a id="supportLink" href="https://t.me/veltrixmold_bot" target="_blank" rel="noopener noreferrer" hidden>پشتیبانی تلگرام ↗</a>
+            <a id="supportBaleLink" href="#" target="_blank" rel="noopener noreferrer" hidden>پشتیبانی بله ↗</a>
+          </div>
+        </div>
+
+        <div class="workspace">
+          <div class="work-column">
+            <section class="panel input-panel">
+              <div class="section-head">
+                <div><p class="step-kicker">۰۲ / مواد اولیه</p><h2>محاسبهٔ فولاد</h2></div>
+                <button id="addSteelRow" class="button button-outline" type="button">+ ردیف فولاد</button>
+              </div>
+              <div class="unit-caption">ابعاد بر حسب میلی‌متر · قیمت هر کیلوگرم به تومان</div>
+              <div id="steelRows" class="steel-rows"></div>
+            </section>
+
+            <section class="panel input-panel">
+              <div class="section-head">
+                <div><p class="step-kicker">۰۳ / عملیات</p><h2>هزینه‌های ساخت</h2></div>
+                <span class="unit-tag">مبلغ‌ها: تومان</span>
+              </div>
+              <p class="section-note">برای هر مرحله یا مبلغ را وارد کنید، یا «نیاز نیست» را انتخاب کنید. مبلغ خالی صفر تلقی نمی‌شود.</p>
+              <div id="serviceRows" class="service-rows"></div>
+            </section>
+
+            <section class="panel input-panel">
+              <div class="section-head">
+                <div><p class="step-kicker">۰۴ / قیمت‌گذاری</p><h2>قیمت پیشنهادی</h2></div>
+                <span class="unit-tag">خروجی: تومان</span>
+              </div>
+              <div class="form-grid price-options">
+                <label class="field"><span>افزایش روی بهای تمام‌شده (%)</span><input id="markup" type="text" inputmode="decimal" value="0" autocomplete="off"></label>
+                <label class="field"><span>پلهٔ گردکردن (تومان)</span><input id="roundStep" type="text" inputmode="decimal" value="1000" autocomplete="off"></label>
+              </div>
+              <p class="field-hint">قیمت پیشنهادی به سمت بالا و به نزدیک‌ترین مضرب پلهٔ انتخابی گرد می‌شود. برای بدون گردکردن، پله را صفر بگذارید.</p>
+            </section>
+
+            <div class="action-row">
+              <button id="calculateButton" class="button button-primary" type="button">محاسبهٔ برآورد <span aria-hidden="true">←</span></button>
+              <button id="saveDraft" class="button button-outline" type="button">ذخیرهٔ پیش‌نویس</button>
+              <button id="newEstimate" class="button button-quiet" type="button">برآورد جدید</button>
+            </div>
+            <p id="appError" class="form-error" role="alert" hidden></p>
+          </div>
+
+          <aside class="panel result-panel">
+            <div class="section-head result-head"><div><p class="step-kicker">خلاصهٔ برآورد</p><h2>جمع هزینه‌ها</h2></div><span class="result-index">VX / 01</span></div>
+            <div id="resultPlaceholder" class="result-placeholder"><span class="placeholder-glyph">＋</span><p>پس از تکمیل ورودی‌ها، خلاصهٔ هزینه در این بخش نمایش داده می‌شود.</p></div>
+            <div id="resultContent" hidden>
+              <div class="result-line"><span>جمع هزینهٔ فولاد</span><strong id="steelTotal">—</strong></div>
+              <div class="result-line"><span>جمع هزینه‌های ساخت</span><strong id="serviceTotal">—</strong></div>
+              <div class="result-line result-subtotal"><span>بهای تمام‌شده</span><strong id="costTotal">—</strong></div>
+              <div class="result-line result-final"><span>قیمت پیشنهادی</span><strong id="proposedTotal">—</strong></div>
+              <div class="difference-line"><span>اختلاف قیمت پیشنهادی با بهای تمام‌شده</span><strong id="differenceTotal">—</strong></div>
+              <div id="steelBreakdown" class="breakdown"></div>
+              <div class="result-actions">
+                <button id="copySummary" class="button button-outline button-wide" type="button">کپی خلاصه</button>
+                <button id="printSummary" class="button button-quiet button-wide" type="button">چاپ / ذخیره PDF</button>
+              </div>
+              <p class="result-disclaimer">این نتیجه تقریبی است؛ هزینه‌های واقعی به مشخصات، روش ساخت و شرایط کارگاه وابسته‌اند.</p>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer"><span>VELTRIX / MOLD COST</span><p>محاسبه‌ها بدون هوش مصنوعی انجام می‌شوند؛ توکن مدل مصرف نمی‌شود.</p><button id="deleteAccount" type="button" class="text-button danger-text" hidden>حذف حساب و داده‌ها</button></footer>
+  </div>
+  <template id="steelRowTemplate">
+    <article class="steel-row">
+      <div class="row-top"><strong class="row-title">قطعهٔ فولادی</strong><button class="icon-button remove-steel" type="button" aria-label="حذف ردیف فولاد">×</button></div>
+      <div class="steel-fields">
+        <label class="field"><span>طول (mm)</span><input data-field="length" type="text" inputmode="decimal" autocomplete="off" required></label>
+        <label class="field"><span>عرض (mm)</span><input data-field="width" type="text" inputmode="decimal" autocomplete="off" required></label>
+        <label class="field"><span>ارتفاع (mm)</span><input data-field="height" type="text" inputmode="decimal" autocomplete="off" required></label>
+        <label class="field"><span>قیمت هر kg (تومان)</span><input data-field="pricePerKg" type="text" inputmode="decimal" autocomplete="off" required></label>
+        <label class="field"><span>تعداد</span><input data-field="quantity" type="text" inputmode="numeric" value="1" autocomplete="off" required></label>
+      </div>
+      <div class="row-calculated"><span>وزن کل ردیف</span><b data-row-weight>—</b><span>هزینهٔ ردیف</span><b data-row-cost>—</b></div>
+    </article>
+  </template>
+  <template id="serviceRowTemplate">
+    <div class="service-row">
+      <label class="service-name"><span data-service-label></span><small>نیاز نیست <input data-not-needed type="checkbox"></small></label>
+      <label class="field service-amount"><span>مبلغ (تومان)</span><input data-service-amount type="text" inputmode="decimal" autocomplete="off"></label>
+    </div>
+  </template>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>
