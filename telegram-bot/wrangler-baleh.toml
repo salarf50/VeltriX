@@ -14,3 +14,7 @@ binding = "AI"
 # The daily job runs at 00:00 Asia/Tehran (20:30 UTC on the previous day).
 # The monthly overview runs on the first Tehran calendar day.
 crons = ["30 20 * * *"]
+
+[[services]]
+binding = "MOLD_COST_APP"
+service = "veltrix-mold-cost"

@@ -5,6 +5,7 @@ const DEFAULT_ADMIN_CHAT_ID = "1602861730";
 function adminChatId(env) {
   return String(env.BALEH_ADMIN_CHAT_ID || DEFAULT_ADMIN_CHAT_ID);
 }
+import { forwardMoldCostAdminCommand, handleInternalMoldCostRequest } from './mold-cost-bridge.js';
 
 // بقیه را در Cloudflare به صورت Secret تنظیم کن:
 // BALEH_BOT_TOKEN  → توکن ربات
@@ -749,6 +750,12 @@ async function processUpdate(env, update) {
   // دستورات ادمین
   if (update.message && String(update.message.chat.id) === String(adminChatId(env))) {
     const text = update.message.text || '';
+    if (await forwardMoldCostAdminCommand(env, update, {
+      channel: 'bale',
+      adminChatId: String(adminChatId(env)),
+      adminUserId: String(env.MOLD_COST_ADMIN_USER_ID || adminChatId(env)),
+      sendReply: (chatId, reply) => send(env, chatId, reply)
+    })) return;
 
     if (text === '/report' || text === '/گزارش') {
       await sendAdminReport(env, adminChatId(env));
@@ -1144,6 +1151,13 @@ async function processUpdate(env, update) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const moldCostBridgeResponse = await handleInternalMoldCostRequest(request, env, {
+      channel: 'bale',
+      adminChatId: String(adminChatId(env)),
+      getMe: () => telegram(env, 'getMe', {}),
+      sendAdmin: (chatId, text) => telegram(env, 'sendMessage', { chat_id: chatId, text })
+    });
+    if (moldCostBridgeResponse) return moldCostBridgeResponse;
 
     if (request.method === 'GET' && url.pathname === '/health') {
       return new Response(JSON.stringify({ ok: true, service: 'veltrix-bot' }), {
