@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.veltrix.moldcost",
+      "sha256_cert_fingerprints": [
+        "A2:4C:2F:77:39:E6:71:7E:44:DF:E1:C2:33:E9:77:2D:FA:41:1A:F4:7D:23:C5:A8:4D:DB:2C:89:BD:50:81:7F"
+      ]
+    }
+  }
+]

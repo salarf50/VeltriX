@@ -3,7 +3,7 @@
   "name": "veltrix-mold-cost",
   "main": "src/worker.ts",
   "compatibility_date": "2026-11-02",
-  "workers_dev": false,
+  "workers_dev": true,
   "observability": { "enabled": false },
   "d1_databases": [
     {
